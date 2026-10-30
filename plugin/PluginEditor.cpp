@@ -98,6 +98,7 @@ void replay(juce::Graphics& g, const RadarVuPaint& cmd) {
 }
 
 RadarVuEditor::RadarVuEditor(RadarVuProcessor& p) : AudioProcessorEditor(p), proc(p) {
+    setOpaque(true); // paint() fills the whole area, so JUCE need not repaint the parent beneath
     constrainer.setMinimumSize(440, 224);
     constrainer.setMaximumSize(4000, 4000);
     constrainer.setFixedAspectRatio(1100.0 / 560.0);

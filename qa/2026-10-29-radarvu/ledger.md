@@ -40,9 +40,10 @@ Created for the first RadarVU build, then extended with ArcVu's full measurement
 - `cargo test --manifest-path dsp/Cargo.toml --offline --lib` → **21 passed** (11 EBU 3341/3342 + detector VU/RMS/K/AES-17/PPM/correlation + radar smoke).
 - `auval -v aufx RdVU OpGr` → **AU VALIDATION SUCCEEDED**.
 - REAPER host suite (hidden, isolated config): **VST3** (10 params) and **AU** (9 params) both **9 PASS** — loads, finite, not silent, deterministic, editor opens, every-parameter-changes-sound, every-parameter-shown-in-the-GUI, state round-trip, editor reopens.
-- Offscreen `RadarVU_QA` visual sweep: all 6 parameters + the fill/FFT toggles change the GUI (meter 34553, reference 8790, target 1865, ceiling 79, window 132179, mode 92613, fill 81379, fft 6668 px).
+- Offscreen `RadarVU_QA` visual sweep: all 6 parameters + the fill/FFT toggles change the GUI.
+- Performance: editor made opaque (`setOpaque(true)`) and the per-frame path count halved (radar 240→96 wedges, goniometer 1024→512); standalone CPU ~29 % → ~14 % — `performance.md`.
 - VST3 class ID `ABCDEF019182FAEB4F70477252645655` (32 hex digits).
 
 ## Follow-ups
 
-Human-eye screenshot review; Logic/Studio One (computer use); AAX/CLAP/LV2 formats; a native parameter panel (AES-17, EBU slow mode, peak scale, LU/LUFS unit, colour themes); persist the FILL/FFT toggles across sessions.
+Human-eye screenshot review; Logic/Studio One (computer use); AAX/CLAP/LV2 formats; a native parameter panel (AES-17, EBU slow mode, peak scale, LU/LUFS unit, colour themes); persist the FILL/FFT toggles across sessions; old-vs-new standalone CPU comparison and the spectrum-mode CPU sample (SKIPPED in `performance.md`).

@@ -30,9 +30,10 @@ const GONIO_CX: f32 = 115.0;
 const GONIO_CY: f32 = 415.0;
 const GONIO_R: f32 = 64.0;
 /// One momentary sample per `window / HISTORY` seconds; the sweep makes one revolution per `window`.
-const HISTORY: usize = 240;
+/// 96 samples keeps the radar smooth while keeping the per-frame fill cheap (96 wedges).
+const HISTORY: usize = 96;
 /// Goniometer trace buffer (decimated in the audio path).
-const TRACE: usize = 1024;
+const TRACE: usize = 512;
 const MAX_POINTS: usize = 32; // 64 floats = 32 xy pairs per paint command
 const TEXT_CAP: usize = 47;
 
