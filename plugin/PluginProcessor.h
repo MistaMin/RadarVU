@@ -1,0 +1,62 @@
+#pragma once
+#include <JuceHeader.h>
+#include "radarvu.h"
+#include <array>
+#include <vector>
+
+class RadarVuProcessor : public juce::AudioProcessor,
+                         private juce::AudioProcessorParameter::Listener {
+public:
+    RadarVuProcessor();
+    ~RadarVuProcessor() override;
+
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override {}
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override { return true; }
+    const juce::String getName() const override { return "RadarVU"; }
+    bool acceptsMidi() const override { return false; }
+    bool producesMidi() const override { return false; }
+    double getTailLengthSeconds() const override { return 0.0; }
+    int getNumPrograms() override { return 1; }
+    int getCurrentProgram() override { return 0; }
+    void setCurrentProgram(int) override {}
+    const juce::String getProgramName(int) override { return {}; }
+    void changeProgramName(int, const juce::String&) override {}
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+
+    int paint(RadarVuPaint* out, int cap) const { return radarvu_paint(meter, out, cap); }
+    void resetLoudness() { radarvu_reset(meter); }
+    // Cycle one of the choice parameters: 0 = meter type, 1 = reference, 2 = target, 3 = ceiling, 4 = window.
+    void cycle(int which);
+    void setMode(int index);
+    void toggleFill() { fillOn = !fillOn; pullSetup(); }
+    void toggleFft() { fftOn = !fftOn; pullSetup(); }
+    bool fill() const { return fillOn; }
+    bool fft() const { return fftOn; }
+    void setFill(bool on) { fillOn = on; pullSetup(); }
+    void setFft(bool on) { fftOn = on; pullSetup(); }
+    void pullSetup();
+
+private:
+    void parameterValueChanged(int, float) override { pullSetup(); }
+    void parameterGestureChanged(int, bool) override {}
+
+    void readParams(RadarVuSetup& s) const;
+    std::array<juce::AudioParameterChoice*, 6> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP }; }
+
+    Meter* meter = nullptr;
+    juce::AudioParameterChoice* meterTypeP = nullptr;
+    juce::AudioParameterChoice* referenceP = nullptr;
+    juce::AudioParameterChoice* targetP = nullptr;
+    juce::AudioParameterChoice* ceilingP = nullptr;
+    juce::AudioParameterChoice* windowP = nullptr;
+    juce::AudioParameterChoice* modeP = nullptr;
+    std::vector<float> interleaved; // reused every block so processBlock never allocates
+    bool fillOn = true;
+    bool fftOn = true;
+};

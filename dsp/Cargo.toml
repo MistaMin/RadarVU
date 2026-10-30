@@ -1,0 +1,12 @@
+[package]
+name = "radarvu_dsp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "BS.1770-5 loudness engine and polar radar display for RadarVU"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+goodlookindri = { path = "../../instruments/GoodLookinDri" }
