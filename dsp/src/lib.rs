@@ -71,6 +71,7 @@ const PEAK_RELEASE_SECONDS: f32 = 1.6;
 const PEAK_HOLD_S: f32 = 3.0;
 const VALUE_HOLD_S: f32 = 5.0;
 const CLIP_HOLD_S: f32 = 2.0;
+const CORRELATION_TAU_S: f32 = 2000.0 / 48_000.0; // = 0.9995 per sample at 48 kHz
 const MAX_CHANNELS: usize = 2;
 
 #[derive(Clone, Copy)]
@@ -319,6 +320,8 @@ impl Meter {
         let ebu_c3 = 1.0 - (-1.0 / (0.1167e-3 * self.sample_rate)).exp();
         let ebu_release = 10f32.powf(-24.0 / 2.8 / 20.0 / self.sample_rate);
         let ebu_slow_c = 1.0 - (-1.0 / (1.15 * self.sample_rate)).exp();
+        // Correlation window: a 41.7 ms time constant at every rate (0.9995 per sample at 48 kHz).
+        let corr_keep = (-1.0 / (CORRELATION_TAU_S * self.sample_rate)).exp();
         for frame in 0..frames {
             for ci in 0..ch {
                 let sample = samples[frame * ch + ci];
@@ -376,9 +379,9 @@ impl Meter {
             // Phase correlation (L/R, on the raw pass-through signal).
             let l = samples[frame * ch];
             let r = if ch > 1 { samples[frame * ch + 1] } else { l };
-            self.corr_xx = self.corr_xx * 0.9995 + l * l;
-            self.corr_yy = self.corr_yy * 0.9995 + r * r;
-            self.corr_xy = self.corr_xy * 0.9995 + l * r;
+            self.corr_xx = self.corr_xx * corr_keep + l * l;
+            self.corr_yy = self.corr_yy * corr_keep + r * r;
+            self.corr_xy = self.corr_xy * corr_keep + l * r;
             let denom = (self.corr_xx * self.corr_yy).sqrt().max(1.0e-12);
             self.correlation = extra::correlation_db(self.corr_xy / denom);
         }
@@ -937,6 +940,9 @@ pub extern "C" fn radarvu_paint(meter: *const Meter, out: *mut RadarVuPaint, cap
     }
     n as c_int
 }
+
+#[cfg(test)]
+mod ballistics;
 
 #[cfg(test)]
 mod tests {
