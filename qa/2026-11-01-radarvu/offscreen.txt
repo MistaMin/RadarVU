@@ -1,0 +1,21 @@
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/radarvu-radar.png
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/radarvu-spectrum.png
+offscreen visual sweep (baseline = defaults):
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-meter.png
+  PASS  meter changes 35913 pixels (5.83003%)
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-reference.png
+  PASS  reference changes 8789 pixels (1.42679%)
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-target.png
+  PASS  target changes 1865 pixels (0.30276%)
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-ceiling.png
+  PASS  ceiling changes 79 pixels (0.0128247%)
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-window.png
+  PASS  window changes 131621 pixels (21.367%)
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-mode.png
+  PASS  mode changes 92674 pixels (15.0445%)
+visual sweep: all parameters shown in the GUI
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-fill-off.png
+  PASS  fill toggle changes 81604 pixels
+wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/sweep-fft-off.png
+  PASS  fft toggle changes 6668 pixels
+toggles: fill and fft switch the GUI

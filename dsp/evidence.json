@@ -1,0 +1,36 @@
+{
+  "project": "RadarVU",
+  "created": "2026-11-01 12:25",
+  "identities": [
+    {
+      "id": "I1",
+      "name": "source",
+      "kind": "source",
+      "path": "/Volumes/Developer/OpenGrid/RadarVU",
+      "sha256": "43dde5bccbd9aa2f9d2d489f320f445ff4af012ddc2726bf578b03864754546a",
+      "commit": "4f4c806326c1bb8bc96ebe797ba9793bebddaada",
+      "dirty": true,
+      "machine": "macOS-15.7.5-arm64-arm-64bit-Mach-O arm64",
+      "date": "2026-11-01 12:25",
+      "note": "",
+      "stale": false
+    }
+  ],
+  "claims": [
+    {
+      "id": "C1",
+      "created": "2026-11-01 12:25",
+      "claim": "Meter ballistics: VU IEC 60268-17 rise/overswing, PPM ITU-R BS.645-2 fall times, EBU 10 ms integration, calibration, SR/block-size invariance, silence, holds, stereo policy",
+      "domain": "runtime",
+      "threshold": "VU 99% in 0.27-0.33 s, overswing 1-1.5%; PPM falls +/-0.1 s; calibration +/-0.2 to 0.5 dB; SR/block +/-0.35 dB",
+      "identity": "I1",
+      "fixture": "synthetic sines/steps/bursts 44.1-192 kHz, blocks 1-4096",
+      "command": "cargo test --release --manifest-path dsp/Cargo.toml --offline --lib",
+      "raw": "dsp/evidence/cargo-test-2026-11-01.txt",
+      "result": "37 passed, 0 failed (16 new in dsp/src/ballistics.rs)",
+      "limits": "Engine-level, not host-rendered; numeric readout behaviour not tested (user choice pending); no listening acceptance",
+      "status": "verified",
+      "updated": "2026-11-01 12:25"
+    }
+  ]
+}

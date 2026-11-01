@@ -1,0 +1,44 @@
+    Finished `release` profile [optimized] target(s) in 0.00s
+     Running unittests src/lib.rs (dsp/target/release/deps/radarvu_dsp-07e6a443bf01e894)
+
+running 37 tests
+test ballistics::correlation_reads_out_of_phase_and_mono ... ok
+test ballistics::over_full_scale_counts_overs_and_does_not_wrap ... ok
+test ballistics::meter_type_change_does_not_leave_stale_peak_programme_state ... ok
+test ballistics::mono_input_reads_the_same_as_dual_mono ... ok
+test ballistics::correlation_time_constant_is_the_same_at_every_rate ... ok
+test ballistics::radar_follows_the_louder_channel_in_either_order ... ok
+test ballistics::ppm_reads_reference_for_a_steady_sine ... ok
+test ballistics::peak_marker_holds_then_falls ... ok
+test ballistics::silence_reads_the_floor_and_is_never_nan ... ok
+test ballistics::vu_falls_from_reference_and_from_loud ... ok
+test ballistics::vu_step_meets_iec_60268_17_at_all_rates ... ok
+test loudness::tests::ebu_3341_case_12_momentary_of_alternating_tones ... ok
+test ballistics::correlation_does_not_depend_on_sample_rate ... ok
+test loudness::tests::k_weighting_at_other_rates_matches_the_48k_table_where_both_exist ... ok
+test ballistics::ebu_integration_time_is_10_ms ... ok
+test loudness::tests::mono_is_a_single_channel_and_reset_clears ... ok
+test loudness::tests::ebu_3341_case_9_short_term_of_alternating_tones ... ok
+test loudness::tests::true_peak_matches_ebu_3341_cases_15_to_19 ... ok
+test tests::click_hit_test_matches_the_chips ... ok
+test tests::correlation_reads_mono_for_identical_channels ... ok
+test tests::k12_reads_zero_at_minus_twelve_dbfs_rms ... ok
+test tests::meter_type_change_clears_the_radar_history ... ok
+test tests::ppm_reads_a_finite_level ... ok
+test tests::reset_clears_history_and_sweep ... ok
+test tests::rms_aes17_reads_zero_for_a_full_scale_sine ... ok
+test loudness::tests::the_sliding_window_follows_its_length ... ok
+test tests::rms_reads_absolute_dbfs ... ok
+test tests::smoke_process_readings_and_paint ... ok
+test tests::vu_reads_zero_for_a_reference_sine ... ok
+test loudness::tests::ebu_3341_case_1_to_2_calibration_tone ... ok
+test loudness::tests::ebu_3341_case_10_and_13_the_maximum_over_bursts ... ok
+test loudness::tests::other_sample_rates_read_the_same_level ... ok
+test ballistics::vu_calibration_holds_at_100_1k_10k_and_three_rates ... ok
+test loudness::tests::ebu_3341_case_3_and_4_the_relative_gate ... ok
+test ballistics::ppm_fall_times_match_itu_table_1_at_two_rates ... ok
+test loudness::tests::ebu_3342_loudness_range_cases_1_to_4 ... ok
+test ballistics::readings_do_not_depend_on_sample_rate_or_block_size ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s
+

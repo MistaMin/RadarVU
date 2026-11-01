@@ -1,0 +1,15 @@
+# RadarVU is a meter: the audio passes through unchanged, so every plugin parameter is display-only.
+# name                                   # reason
+audio:Meter type                        # selects the meter shown on the radar; display only
+audio:Reference level                   # sets the 0 VU / PPM alignment; display only
+audio:Target level                       # sets the loudness target; the meter never changes the audio
+audio:True-peak ceiling                  # sets the true-peak ceiling shown on the readout; display only
+audio:Sweep window                       # sets the radar sweep/history window; display only
+audio:Display mode                       # switches radar/bar rendering; display only
+
+# REAPER host-added parameters (not RadarVU parameters, not in the RadarVU editor).
+audio:Bypass                             # REAPER host bypass; a pass-through meter sounds the same either way
+audio:Wet                                # REAPER host wet/dry mix; identical for a pass-through meter
+visual:Bypass                            # REAPER host control, not a RadarVU GUI control
+visual:Wet                               # REAPER host control, not a RadarVU GUI control
+visual:Delta                             # REAPER host control, not a RadarVU GUI control

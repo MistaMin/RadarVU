@@ -7,3 +7,5 @@
 # QA host-suite runs and rendered evidence (large / derived; canonical screenshots live in docs/images/)
 /qa/*/reaper*/
 /qa/*/*.png
+/build-qa/
+/qa/*/final-*/

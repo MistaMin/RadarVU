@@ -1,0 +1,167 @@
+[  2%] Building RadarVU Rust DSP
+   Compiling goodlookindri v0.1.0 (/Volumes/Developer/OpenGrid/instruments/GoodLookinDri)
+   Compiling radarvu_dsp v0.1.0 (/Volumes/Developer/OpenGrid/RadarVU/dsp)
+    Finished `release` profile [optimized] target(s) in 5.13s
+[  2%] Built target radarvu_dsp
+[  2%] Generating RadarVU_artefacts/JuceLibraryCode/JuceHeader.h
+[  4%] Building CXX object CMakeFiles/RadarVU.dir/plugin/PluginEditor.cpp.o
+[  4%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[  6%] Building CXX object CMakeFiles/RadarVU.dir/plugin/PluginProcessor.cpp.o
+[  9%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_2.cpp.o
+[ 11%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 13%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_3.cpp.o
+[ 15%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_5.cpp.o
+[ 15%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_4.cpp.o
+[ 18%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 20%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.o
+[ 20%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_Sheenbidi.c.o
+[ 22%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_1.c.o
+[ 25%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_2.c.o
+[ 27%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_3.c.o
+[ 27%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libpng.c.o
+[ 29%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dec.c.o
+[ 31%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec.c.o
+[ 34%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec_avx2.c.o
+[ 34%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec_sse41.c.o
+[ 36%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc.c.o
+[ 38%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc_avx2.c.o
+[ 40%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc_sse41.c.o
+[ 40%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_enc.c.o
+[ 43%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_sharpyuv.c.o
+[ 45%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_utils.c.o
+[ 47%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_lunasvg.c.o
+[ 47%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 50%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_events/juce_events.mm.o
+[ 52%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core_CompilationTime.cpp.o
+[ 54%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core_zlib.c.o
+[ 54%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core.mm.o
+[ 56%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 59%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless_ara.cpp.o
+[ 61%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless_lv2_libs.cpp.o
+[ 61%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless.mm.o
+[ 63%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 65%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 68%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_flac_1.c.o
+[ 68%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_flac_2.c.o
+[ 70%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_ogg.c.o
+[ 72%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_opus.c.o
+[ 75%] Building C object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_opusfile.c.o
+[ 75%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 77%] Building CXX object CMakeFiles/RadarVU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 79%] Linking CXX static library RadarVU_artefacts/Release/libRadarVU_SharedCode.a
+[ 79%] Built target RadarVU
+[ 79%] Generating RadarVU_artefacts/JuceLibraryCode/RadarVU_Standalone/PkgInfo
+[ 84%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o
+[ 84%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o
+[ 86%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o
+[ 88%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o
+[ 95%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o
+[ 97%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o
+Copying OS X content RadarVU_artefacts/Release/Standalone/RadarVU.app/Contents/Resources/RecentFilesMenuTemplate.nib
+[100%] Building CXX object CMakeFiles/RadarVU_Standalone.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o
+[100%] Linking CXX executable RadarVU_artefacts/Release/Standalone/RadarVU.app/Contents/MacOS/RadarVU
+[100%] Built target RadarVU_Standalone
+[  2%] Building VST3 manifest helper for RadarVU
+[  4%] Built target radarvu_dsp
+-- The CXX compiler identification is AppleClang 16.0.0.16000026
+-- Detecting CXX compiler ABI info
+[ 78%] Built target RadarVU
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (1.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Volumes/Developer/OpenGrid/RadarVU/build-qa/vst3_helpers/RadarVU
+[ 50%] Building CXX object CMakeFiles/vst3_helper.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.cpp.o
+[100%] Linking CXX executable vst3_helper
+[100%] Built target vst3_helper
+[ 78%] Built target RadarVU_vst3_helper
+[ 80%] Generating RadarVU_artefacts/JuceLibraryCode/RadarVU_VST3/PkgInfo
+[ 82%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o
+[ 84%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o
+[ 86%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o
+[ 89%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o
+[ 91%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o
+[ 95%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o
+[ 95%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o
+[ 97%] Building CXX object CMakeFiles/RadarVU_VST3.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o
+[100%] Linking CXX CFBundle shared module RadarVU_artefacts/Release/VST3/RadarVU.vst3/Contents/MacOS/RadarVU
+/Volumes/Developer/OpenGrid/RadarVU/build-qa/RadarVU_artefacts/Release/VST3/RadarVU.vst3: code has no resources but signature indicates they must be present
+-- Replacing invalid signature with ad-hoc signature
+/Volumes/Developer/OpenGrid/RadarVU/build-qa/RadarVU_artefacts/Release/VST3/RadarVU.vst3: replacing existing signature
+removing moduleinfo.json
+creating /Volumes/Developer/OpenGrid/RadarVU/build-qa/RadarVU_artefacts/Release/VST3/RadarVU.vst3/Contents/Resources/moduleinfo.json
+[100%] Built target RadarVU_VST3
+[  2%] Built target radarvu_dsp
+[ 77%] Built target RadarVU
+[ 80%] Generating RadarVU_artefacts/JuceLibraryCode/RadarVU_AU/PkgInfo
+[ 80%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o
+[ 84%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o
+[ 88%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o
+[ 88%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o
+[ 88%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o
+[ 91%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o
+[ 91%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o
+[ 93%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o
+[ 95%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o
+[ 97%] Building CXX object CMakeFiles/RadarVU_AU.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o
+[100%] Linking CXX CFBundle shared module RadarVU_artefacts/Release/AU/RadarVU.component/Contents/MacOS/RadarVU
+[100%] Built target RadarVU_AU
+[  2%] Built target radarvu_dsp
+[  2%] Generating RadarVU_QA_artefacts/JuceLibraryCode/JuceHeader.h
+[  5%] Building CXX object CMakeFiles/RadarVU_QA.dir/plugin/PluginProcessor.cpp.o
+[ 11%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 11%] Building CXX object CMakeFiles/RadarVU_QA.dir/qa/UiAudit.cpp.o
+[ 11%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 13%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 13%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_3.cpp.o
+[ 16%] Building CXX object CMakeFiles/RadarVU_QA.dir/plugin/PluginEditor.cpp.o
+[ 19%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_2.cpp.o
+[ 22%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_4.cpp.o
+[ 25%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics_5.cpp.o
+[ 25%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 27%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.o
+[ 30%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_Sheenbidi.c.o
+[ 33%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_1.c.o
+[ 33%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_2.c.o
+[ 36%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libjpg_3.c.o
+[ 38%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libpng.c.o
+[ 41%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dec.c.o
+[ 41%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec.c.o
+[ 44%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec_avx2.c.o
+[ 47%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_dec_sse41.c.o
+[ 50%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc.c.o
+[ 50%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc_avx2.c.o
+[ 52%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_dsp_enc_sse41.c.o
+[ 55%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_enc.c.o
+[ 58%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_sharpyuv.c.o
+[ 58%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_libwebp_utils.c.o
+[ 61%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics_lunasvg.c.o
+[ 63%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 66%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_events/juce_events.mm.o
+[ 66%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core_CompilationTime.cpp.o
+[ 69%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core_zlib.c.o
+[ 72%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_core/juce_core.mm.o
+[ 75%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 75%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless_ara.cpp.o
+[ 77%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless_lv2_libs.cpp.o
+[ 80%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_processors_headless/juce_audio_processors_headless.mm.o
+[ 83%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 83%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_flac_1.c.o
+[ 86%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_flac_2.c.o
+[ 88%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_ogg.c.o
+[ 91%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_opus.c.o
+[ 91%] Building C object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats_opusfile.c.o
+[ 94%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 97%] Building CXX object CMakeFiles/RadarVU_QA.dir/Volumes/Developer/OpenGrid/audiogridder/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[100%] Linking CXX executable RadarVU_QA_artefacts/Release/RadarVU_QA
+[100%] Built target RadarVU_QA
