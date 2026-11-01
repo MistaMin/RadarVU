@@ -14,6 +14,18 @@
       "date": "2026-11-01 12:25",
       "note": "",
       "stale": false
+    },
+    {
+      "id": "I2",
+      "name": "candidate",
+      "kind": "binary",
+      "path": "/Volumes/Developer/OpenGrid/RadarVU/dist/release-1.0.0/macos/RadarVU-1.0.0-macos-bundles.zip",
+      "sha256": "b8b89f7948900cf041c4ff95cb33cc5ed8023046af52d28fa6b25c28b225a743",
+      "commit": "563e2de31ffb6bfac58e1da9090f94aed7f4eace",
+      "dirty": true,
+      "machine": "macOS-15.7.5-arm64-arm-64bit-Mach-O arm64",
+      "date": "2026-11-01 20:15",
+      "note": ""
     }
   ],
   "claims": [

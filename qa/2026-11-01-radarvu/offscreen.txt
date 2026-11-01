@@ -1,3 +1,17 @@
+state round trip (no host):
+  PASS  state Meter type: saved index 1, restored 1
+  PASS  state Reference level: saved index 1, restored 1
+  PASS  state Target level: saved index 3, restored 3
+  PASS  state True-peak ceiling: saved index 0, restored 0
+  PASS  state Sweep window: saved index 2, restored 2
+  PASS  state Display mode: saved index 1, restored 1
+  PASS  old layout meter: restored 1, want 1
+  PASS  old layout reference: restored 0, want 0
+  PASS  old layout target: restored 2, want 2
+  PASS  old layout ceiling: restored 1, want 1
+  PASS  old layout window: restored 3, want 3
+  PASS  old layout mode: restored 1, want 1
+state round trip: PASS
 wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/radarvu-radar.png
 wrote /Volumes/Developer/OpenGrid/RadarVU/qa/2026-11-01-radarvu/radarvu-spectrum.png
 offscreen visual sweep (baseline = defaults):
