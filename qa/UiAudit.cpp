@@ -24,7 +24,49 @@ static int countChanged(const juce::Image& a, const juce::Image& b) {
     return n;
 }
 
+// State round trip without a host: every parameter set to a non-default value, saved with
+// getStateInformation, restored into a fresh processor with setStateInformation, then compared.
+static bool stateRoundTrip() {
+    RadarVuProcessor a;
+    const float values[6] = { 0.13f, 0.5f, 0.87f, 0.24f, 0.61f, 0.98f };
+    int i = 0;
+    for (auto* p : a.getParameters()) if (i < 6) p->setValueNotifyingHost(values[i++]);
+    juce::MemoryBlock blob;
+    a.getStateInformation(blob);
+    RadarVuProcessor b;
+    b.setStateInformation(blob.getData(), (int) blob.getSize());
+    bool ok = true;
+    for (int k = 0; k < 6; ++k) {
+        auto* pa = dynamic_cast<juce::AudioParameterChoice*>(a.getParameters()[k]);
+        auto* pb = dynamic_cast<juce::AudioParameterChoice*>(b.getParameters()[k]);
+        const bool same = pa && pb && pa->getIndex() == pb->getIndex();
+        std::cout << "  " << (same ? "PASS" : "FAIL") << "  state " << pa->getName(40) << ": saved index "
+                  << pa->getIndex() << ", restored " << pb->getIndex() << "\n";
+        ok = ok && same;
+    }
+    // A project saved in the earlier <P id index> layout must still load.
+    juce::XmlElement old("RadarVU");
+    const char* ids[6] = { "meter", "reference", "target", "ceiling", "window", "mode" };
+    const int idx[6] = { 1, 0, 2, 1, 3, 1 };
+    for (int k = 0; k < 6; ++k) { auto* e = old.createNewChildElement("P"); e->setAttribute("id", ids[k]); e->setAttribute("index", idx[k]); }
+    juce::MemoryBlock oldBlob;
+    juce::AudioProcessor::copyXmlToBinary(old, oldBlob);
+    RadarVuProcessor c;
+    c.setStateInformation(oldBlob.getData(), (int) oldBlob.getSize());
+    for (int k = 0; k < 6; ++k) {
+        auto* pc = dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[k]);
+        const bool same = pc && pc->getIndex() == idx[k];
+        std::cout << "  " << (same ? "PASS" : "FAIL") << "  old layout " << ids[k] << ": restored " << (pc ? pc->getIndex() : -1) << ", want " << idx[k] << "\n";
+        ok = ok && same;
+    }
+    return ok;
+}
+
 int main(int argc, char** argv) {
+    std::cout << "state round trip (no host):\n";
+    const bool stateOk = stateRoundTrip();
+    std::cout << (stateOk ? "state round trip: PASS\n" : "state round trip: FAIL\n");
+
     juce::File outDir = juce::File::getCurrentWorkingDirectory();
     if (argc > 1) outDir = juce::File(argv[1]);
     outDir.createDirectory();

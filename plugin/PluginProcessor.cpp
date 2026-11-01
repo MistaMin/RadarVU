@@ -113,9 +113,11 @@ void RadarVuProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Midi
 void RadarVuProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("RadarVU");
     for (auto* p : params()) {
-        auto* e = root->createNewChildElement("P");
+        // Standard layout (<PARAM id value>) so hosts and test tools can read the real state;
+        // "index" is kept for readers of the earlier <P> layout.
+        auto* e = root->createNewChildElement("PARAM");
         e->setAttribute("id", p->getParameterID());
-        e->setAttribute("index", p->getIndex());
+        e->setAttribute("value", p->getIndex());
     }
     copyXmlToBinary(*root, destData);
 }
@@ -123,12 +125,13 @@ void RadarVuProcessor::getStateInformation(juce::MemoryBlock& destData) {
 void RadarVuProcessor::setStateInformation(const void* data, int sizeInBytes) {
     if (auto root = getXmlFromBinary(data, sizeInBytes)) {
         for (auto* e : root->getChildIterator()) {
-            if (!e->hasTagName("P")) continue;
+            const bool old = e->hasTagName("P");   // earlier layout: <P id index>
+            if (!old && !e->hasTagName("PARAM")) continue;
             const auto id = e->getStringAttribute("id");
             for (auto* p : params()) {
                 if (p->getParameterID() != id) continue;
                 const int n = p->choices.size();
-                const int index = juce::jlimit(0, n - 1, e->getIntAttribute("index"));
+                const int index = juce::jlimit(0, n - 1, old ? e->getIntAttribute("index") : e->getIntAttribute("value"));
                 if (n > 1) p->setValueNotifyingHost((float) index / (float) (n - 1));
             }
         }
