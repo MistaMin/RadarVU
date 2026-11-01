@@ -65,10 +65,8 @@ if [ "${SIGN:-0}" = "1" ]; then
   codesign --verify --deep --strict --verbose=2 "$ART/Standalone/RadarVU.app"
   if [ "$AAX" = 1 ]; then
     echo "==> AAX: Developer ID, then PACE Eden signature"
-    codesign --force --deep --timestamp --options runtime --sign "$APP_ID" "$ART/AAX/RadarVU.aaxplugin"
-    "$WRAPTOOL" sign --verbose --account "$PACE_ACCOUNT" --wcguid "$AAX_WCGUID" --signid "$APP_ID" \
-      --in "$ART/AAX/RadarVU.aaxplugin" --out "$ART/AAX/RadarVU.aaxplugin" --autoinstall on
-    "$WRAPTOOL" verify --verbose --in "$ART/AAX/RadarVU.aaxplugin"
+    SIGN_AAX=${SIGN_AAX:-"$HOME/.agent/skills/Make-Plugin-Release/scripts/sign_aax.sh"}
+    "$SIGN_AAX" "$ART/AAX/RadarVU.aaxplugin" "$AAX_WCGUID" "$PACE_ACCOUNT" "$APP_ID"
   fi
 else
   echo "==> Unsigned build: the AAX is NOT PACE-signed and must not be released"
