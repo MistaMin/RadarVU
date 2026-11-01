@@ -9,3 +9,8 @@
 /qa/*/*.png
 /build-qa/
 /qa/*/final-*/
+/dist/
+/output/
+/qa/*/aax/
+/qa/*/zipfinal/aax/
+/qa/*/zipfinal/aax-validate.txt

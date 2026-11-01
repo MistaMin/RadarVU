@@ -4,6 +4,11 @@
 #include <array>
 #include <vector>
 
+// AAX reads its control-surface page table from Contents/Resources/RadarVU.xml.
+struct RadarVuAAXExtensions : juce::AAXClientExtensions {
+    juce::String getPageFileName() const override { return "RadarVU.xml"; }
+};
+
 class RadarVuProcessor : public juce::AudioProcessor,
                          private juce::AudioProcessorParameter::Listener {
 public:
@@ -23,6 +28,7 @@ public:
     double getTailLengthSeconds() const override { return 0.0; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
+    juce::AAXClientExtensions& getAAXClientExtensions() override { return aaxExtensions; }
     void setCurrentProgram(int) override {}
     const juce::String getProgramName(int) override { return {}; }
     void changeProgramName(int, const juce::String&) override {}
@@ -49,6 +55,7 @@ private:
     void readParams(RadarVuSetup& s) const;
     std::array<juce::AudioParameterChoice*, 6> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP }; }
 
+    RadarVuAAXExtensions aaxExtensions;
     Meter* meter = nullptr;
     juce::AudioParameterChoice* meterTypeP = nullptr;
     juce::AudioParameterChoice* referenceP = nullptr;
