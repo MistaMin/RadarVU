@@ -1,0 +1,40 @@
+RadarVU Binary Freeware License
+Copyright (c) 2026 OpenGrid
+
+Scope
+This license applies to the official compiled RadarVU plug-ins, standalone
+application, and installers distributed by OpenGrid.
+RadarVU source code is separately available under the MIT License.
+
+Permission to use
+You may download, install, and use the official binaries free of charge,
+for personal or commercial purposes, including professional audio production.
+The official binaries are distributed as proprietary freeware, not under an
+open-source license. Freeware describes their price and permission to use;
+it does not place the complete binaries in the public domain or grant the
+MIT source license over third-party code incorporated into them.
+
+Third-party components
+The official binaries are built using the publisher's JUCE commercial
+license. End users do not need a JUCE developer license to install or use
+these binaries. The publisher's JUCE license is not transferred to anyone
+building or distributing their own versions from source.
+RadarVU's MIT-licensed source and the MIT-licensed GoodLookinDri drawing library
+retain their respective MIT permissions. See THIRD_PARTY_LICENSES.md, the
+included MIT license texts and the third-party license texts in the
+Licenses folder (installed with the binaries). These freeware terms do not restrict rights
+granted by those component licenses. External components retain their own
+licenses; no license to JUCE or the Avid AAX SDK is granted by this document.
+
+Warranty
+THE BINARIES ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. TO THE EXTENT PERMITTED BY APPLICABLE LAW,
+THE COPYRIGHT HOLDER IS NOT LIABLE FOR CLAIMS, DAMAGES OR OTHER LIABILITY
+ARISING FROM THE BINARIES OR THEIR USE.
+
+Independent project
+RadarVU is an independent OpenGrid audio project. It follows published meter standards
+(IEC 60268-17, ITU-R BS.645-2, EBU Tech 3205-E, AES-17) and claims no affiliation with,
+sponsorship by, or endorsement from any other meter or plug-in maker. Third-party software
+and format names appear for required attribution or compatibility only.

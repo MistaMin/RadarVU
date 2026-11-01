@@ -30,7 +30,7 @@ The right-hand panel reads **Momentary**, **Short-Term**, **Integrated**, **True
 - **Loudness to ITU-R BS.1770-5** (K-weighting, gating) with the EBU Tech 3341 time scales and Tech 3342 loudness range, and 4× oversampled true peak. The engine is the verified implementation shared with ArcVu and is checked against the EBU 3341/3342 calibration signals.
 - **Radar and Spectrum display modes** — the radar is a filled multicolour polar history (deep-blue → cyan → green → amber → orange → red heat ramp), and Spectrum is a full multicolour FFT analyser. Both freely resizable, and the fill / FFT can be toggled off.
 - **Clickable header** to pick the meter type (VU…EBU, Loudness), the reference (−20/−18/−14 dBFS), the loudness target (−23/−18/−16/−14 LUFS), true-peak ceiling (−1/−2/−3 dBTP) and sweep window (5/10/15/20/30 s), plus reset.
-- **Formats.** VST3, Audio Unit and Standalone on macOS; VST3 and Standalone elsewhere.
+- **Formats.** VST3, Audio Unit, CLAP, LV2, AAX and Standalone on macOS; VST3, LV2 and Standalone elsewhere. AAX needs the Avid AAX SDK to build and is released only after PACE signing.
 
 ## How it works
 
@@ -49,7 +49,7 @@ Rust (`cargo`) and a JUCE checkout next to this repository are required (JUCE at
 
 ## Quality
 
-The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, AES-17, K-12, PPM, correlation) — 21 tests.
+The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, AES-17, K-12, PPM, correlation) plus the meter ballistics suite (VU and PPM response, calibration, sample-rate and block-size invariance) — 37 tests.
 
 ## Licence
 
