@@ -1065,4 +1065,309 @@ mod tests {
         m.clear_history();
         assert!(m.history.iter().all(|v| *v <= loudness::FLOOR));
     }
+
+    // -----------------------------------------------------------------------------------------
+    // Meter ballistics (added 2026-11-02 for the Windows release QA; uncommitted QA addition).
+    // Standards: VU per IEC 60268-17 (300 ms rise to 99% of deflection, overshoot 1.0-1.5%,
+    // symmetric fall); PPM decay per ITU-R BS.645-2 Annex 2 Table 1 (Type I: 20 dB in 1.7 s)
+    // and EBU Tech 3205 (24 dB in 2.8 s); peak hold per the product's 5 s value hold.
+    // -----------------------------------------------------------------------------------------
+
+    /// Feeds a 1 kHz stereo tone block, continuing `phase` so blocks join seamlessly.
+    fn tone_block(m: &mut Meter, frames: usize, amplitude: f32, phase: &mut f32) {
+        let mut inter = vec![0.0f32; frames * 2];
+        let step = std::f32::consts::TAU * 1000.0 / m.sample_rate;
+        for i in 0..frames {
+            let v = amplitude * phase.sin();
+            *phase += step;
+            inter[i * 2] = v;
+            inter[i * 2 + 1] = v;
+        }
+        m.process_interleaved(&inter, 2);
+    }
+
+    fn silence_block(m: &mut Meter, frames: usize) {
+        let inter = vec![0.0f32; frames * 2];
+        m.process_interleaved(&inter, 2);
+    }
+
+    #[test]
+    fn vu_step_rise_overshoot_and_fall_follow_iec_60268_17() {
+        let sr = 48_000.0;
+        let amp = 10f32.powf(-18.0 / 20.0); // reference sine: steady state must read 0 VU
+        // Steady-state reference.
+        let mut steady = Meter::new(sr);
+        steady.kind = 0;
+        steady.reference_db = -18.0;
+        tone(&mut steady, 4.0, amp);
+        let target_db = steady.reading(0);
+        assert!((target_db).abs() < 0.6, "VU steady state {} dB", target_db);
+
+        // Rise: 99% of the steady deflection is target_db + 20*log10(0.99).
+        let rise_thr = target_db + 20.0 * 0.99f32.log10();
+        let mut m = Meter::new(sr);
+        m.kind = 0;
+        m.reference_db = -18.0;
+        let ms = (sr * 0.001) as usize;
+        let mut phase = 0.0f32;
+        let mut rise_t = None;
+        let mut max_db = f32::NEG_INFINITY;
+        for step in 0..2000 {
+            tone_block(&mut m, ms, amp, &mut phase);
+            let r = m.reading(0);
+            if rise_t.is_none() && r >= rise_thr {
+                rise_t = Some((step + 1) as f32 * 0.001);
+            }
+            max_db = max_db.max(r);
+        }
+        let rise_t = rise_t.expect("VU never reached 99% of the reference deflection");
+        assert!(
+            (0.27..=0.33).contains(&rise_t),
+            "VU 99% rise {:.3} s (IEC 60268-17: 0.300 s +/-10%)",
+            rise_t
+        );
+        // Overshoot in per cent of the deflection (linear domain).
+        let overshoot = (10f32.powf((max_db - target_db) / 20.0) - 1.0) * 100.0;
+        assert!(
+            (0.5..=1.6).contains(&overshoot),
+            "VU overshoot {:.2}% (IEC 60268-17: 1.0-1.5%)",
+            overshoot
+        );
+        // Fall: symmetric movement; silence must bring the pointer to 1% of the reference
+        // deflection (target - 40 dB) in about the same time.
+        let fall_thr = target_db - 40.0;
+        let mut fall_t = None;
+        for step in 0..2000 {
+            silence_block(&mut m, ms);
+            if fall_t.is_none() && m.reading(0) <= fall_thr {
+                fall_t = Some((step + 1) as f32 * 0.001);
+            }
+        }
+        let fall_t = fall_t.expect("VU never fell to 1% of the reference deflection");
+        assert!(
+            (0.25..=0.35).contains(&fall_t),
+            "VU fall to 1% {:.3} s (symmetric with the 0.300 s rise)",
+            fall_t
+        );
+        eprintln!(
+            "VU ballistics: rise {} s, overshoot {:.2}%, fall {} s",
+            rise_t, overshoot, fall_t
+        );
+    }
+
+    #[test]
+    fn ppm_type_i_falls_20_db_in_1_7_s() {
+        let sr = 48_000.0;
+        let mut m = Meter::new(sr);
+        m.kind = 5; // DIN Type I
+        m.reference_db = -18.0;
+        tone(&mut m, 3.0, 10f32.powf(-18.0 / 20.0));
+        let start = m.reading(0);
+        let ms = (sr * 0.001) as usize;
+        let (mut t_hi, mut t_lo) = (None, None);
+        for step in 0..5000 {
+            silence_block(&mut m, ms);
+            let r = m.reading(0);
+            if t_hi.is_none() && r <= start - 2.0 {
+                t_hi = Some((step + 1) as f32 * 0.001);
+            }
+            if r <= start - 22.0 {
+                t_lo = Some((step + 1) as f32 * 0.001);
+                break;
+            }
+        }
+        let fall = t_lo.unwrap() - t_hi.unwrap(); // seconds for the middle 20 dB
+        assert!(
+            (1.53..=1.87).contains(&fall),
+            "Type I PPM 20 dB fall {:.3} s (ITU-R BS.645-2: 1.7 s)",
+            fall
+        );
+        eprintln!("PPM Type I: 20 dB fall {} s", fall);
+    }
+
+    #[test]
+    fn ebu_ppm_falls_24_db_in_2_8_s() {
+        let sr = 48_000.0;
+        let mut m = Meter::new(sr);
+        m.kind = 8; // EBU
+        m.reference_db = -18.0;
+        tone(&mut m, 3.0, 10f32.powf(-18.0 / 20.0));
+        let start = m.reading(0);
+        let ms = (sr * 0.001) as usize;
+        let (mut t_hi, mut t_lo) = (None, None);
+        for step in 0..7000 {
+            silence_block(&mut m, ms);
+            let r = m.reading(0);
+            if t_hi.is_none() && r <= start - 2.0 {
+                t_hi = Some((step + 1) as f32 * 0.001);
+            }
+            if r <= start - 26.0 {
+                t_lo = Some((step + 1) as f32 * 0.001);
+                break;
+            }
+        }
+        let fall = t_lo.unwrap() - t_hi.unwrap(); // seconds for the middle 24 dB
+        assert!(
+            (2.52..=3.08).contains(&fall),
+            "EBU PPM 24 dB fall {:.3} s (EBU Tech 3205: 2.8 s)",
+            fall
+        );
+        eprintln!("PPM EBU: 24 dB fall {} s", fall);
+    }
+
+    #[test]
+    fn ppm_type_i_5ms_burst_matches_an_independent_one_pole_model() {
+        // Independent model: the Type I attack is a one-pole integrator with a 5 ms time
+        // constant over the rectified 1 kHz sine. Simulate that recurrence here (not via the
+        // Meter) and require the meter's continuous-vs-5 ms-burst droop to match it.
+        let sr = 48_000.0;
+        let amp = 10f32.powf(-18.0 / 20.0);
+        let atk = 1.0 - (-1.0 / (0.005 * sr as f32)).exp();
+        let mut model = |seconds: f32| -> f32 {
+            let frames = (seconds * sr as f32) as usize;
+            let mut y = 0.0f32;
+            let mut phase = 0.0f32;
+            let step = std::f32::consts::TAU * 1000.0 / sr as f32;
+            for _ in 0..frames {
+                let mag = (amp * phase.sin()).abs();
+                phase += step;
+                if mag > y {
+                    y += atk * (mag - y);
+                }
+            }
+            y
+        };
+        let model_droop = 20.0 * (model(0.005) / model(3.0)).log10(); // negative dB
+
+        let mut settled = Meter::new(sr);
+        settled.kind = 5;
+        settled.reference_db = -18.0;
+        tone(&mut settled, 3.0, amp);
+        let full = settled.reading(0);
+
+        let mut m = Meter::new(sr);
+        m.kind = 5;
+        m.reference_db = -18.0;
+        let mut phase = 0.0f32;
+        tone_block(&mut m, (sr * 0.005) as usize, amp, &mut phase);
+        let droop = m.reading(0) - full; // negative dB
+        assert!(
+            (droop - model_droop).abs() < 0.3,
+            "Type I 5 ms burst droop {:.2} dB vs independent 5 ms one-pole model {:.2} dB",
+            droop,
+            model_droop
+        );
+        eprintln!(
+            "PPM Type I: 5 ms burst droop {:.2} dB (model {:.2} dB)",
+            droop, model_droop
+        );
+    }
+
+    #[test]
+    fn numeric_peak_holds_5s_then_falls_and_reset_clears() {
+        let sr = 48_000.0;
+        let mut m = Meter::new(sr);
+        tone(&mut m, 0.1, 0.5); // peak 0.5 -> +14.99 on the -18 dBFS VU alignment scale
+        let held = m.peak_db(0);
+        let expected = 20.0
+            * (0.5f32 / (10f32.powf(-18.0 / 20.0) * std::f32::consts::FRAC_1_SQRT_2)).log10();
+        assert!((held - expected).abs() < 0.1, "peak of the burst: {} vs {}", held, expected);
+        silence_block(&mut m, (sr * 4.0) as usize);
+        assert!(
+            (m.peak_db(0) - held).abs() < 0.01,
+            "numeric peak moved during the 5 s hold: {} vs {}",
+            m.peak_db(0),
+            held
+        );
+        silence_block(&mut m, (sr * 3.0) as usize); // 7.1 s after the burst
+        assert!(
+            m.peak_db(0) < held - 0.5,
+            "numeric peak still held after the 5 s hold: {}",
+            m.peak_db(0)
+        );
+        m.reset();
+        assert!(m.peak_db(0) < -100.0, "reset did not clear the peak hold");
+    }
+
+    #[test]
+    fn readings_do_not_depend_on_the_buffer_size() {
+        let sr = 48_000.0;
+        let amp = 10f32.powf(-20.0 / 20.0);
+        let mut small = Meter::new(sr);
+        let mut big = Meter::new(sr);
+        small.kind = 1;
+        big.kind = 1;
+        let mut phase = 0.0f32;
+        let total = (sr * 3.0) as usize;
+        let mut fed = 0;
+        while fed < total {
+            let n = 64.min(total - fed);
+            tone_block(&mut small, n, amp, &mut phase);
+            fed += n;
+        }
+        let mut phase = 0.0f32;
+        let mut fed = 0;
+        while fed < total {
+            let n = 4096.min(total - fed);
+            tone_block(&mut big, n, amp, &mut phase);
+            fed += n;
+        }
+        assert!(
+            (small.reading(0) - big.reading(0)).abs() < 0.01,
+            "RMS reading depends on the buffer size: {} vs {}",
+            small.reading(0),
+            big.reading(0)
+        );
+        assert!(
+            (small.loud.readings().integrated - big.loud.readings().integrated).abs() < 0.01,
+            "integrated loudness depends on the buffer size: {} vs {}",
+            small.loud.readings().integrated,
+            big.loud.readings().integrated
+        );
+    }
+
+    #[test]
+    fn digital_silence_reads_the_floor_and_over_input_counts_without_wrapping() {
+        let sr = 48_000.0;
+        let mut m = Meter::new(sr);
+        silence_block(&mut m, (sr * 0.5) as usize);
+        for kind in 0..=8 {
+            m.kind = kind;
+            let r = m.reading(0);
+            assert!(r.is_finite(), "kind {} reads non-finite on silence", kind);
+            assert!(r <= -100.0, "kind {} silence floor {} dB", kind, r);
+            assert_eq!(db_text(r), "−−.−", "kind {} silence must show the floor", kind);
+        }
+        // Over full-scale: three consecutive samples above 0 dBFS count one over; no wrapping.
+        let hot = vec![1.5f32; 2 * 480];
+        m.process_interleaved(&hot, 2);
+        assert!(m.overs >= 1, "over counter did not count the clipped run");
+        assert!(m.reading(0).is_finite(), "reading wrapped on over-full-scale input");
+        assert!(m.channels[0].clip_t > 0.0, "clip indicator did not latch");
+    }
+
+    #[test]
+    fn radar_links_stereo_by_the_louder_channel() {
+        let sr = 48_000.0;
+        let mut m = Meter::new(sr);
+        m.kind = 1; // RMS
+        let frames = (sr * 2.0) as usize;
+        let mut inter = vec![0.0f32; frames * 2];
+        let step = std::f32::consts::TAU * 1000.0 / sr as f32;
+        let mut phase = 0.0f32;
+        for i in 0..frames {
+            let v = phase.sin();
+            phase += step;
+            inter[i * 2] = 10f32.powf(-10.0 / 20.0) * v; // loud left
+            inter[i * 2 + 1] = 10f32.powf(-30.0 / 20.0) * v; // quiet right
+        }
+        m.process_interleaved(&inter, 2);
+        let loud = m.reading(0);
+        assert!(
+            (m.radar_reading() - loud).abs() < 0.01,
+            "radar must follow the louder channel: radar {} vs left {}",
+            m.radar_reading(),
+            loud
+        );
+    }
 }

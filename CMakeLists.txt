@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(RadarVU VERSION 0.1.0)
+project(RadarVU VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
@@ -13,13 +13,18 @@ find_program(RADARVU_CARGO cargo HINTS "$ENV{HOME}/.cargo/bin" "/opt/homebrew/bi
 if(NOT RADARVU_CARGO)
     message(FATAL_ERROR "cargo (Rust) is required to build the RadarVU detector")
 endif()
-set(RADARVU_LIB ${CMAKE_BINARY_DIR}/libradarvu_dsp.a)
+if(WIN32)
+    set(RADARVU_LIB_NAME radarvu_dsp.lib)
+else()
+    set(RADARVU_LIB_NAME libradarvu_dsp.a)
+endif()
+set(RADARVU_LIB ${CMAKE_BINARY_DIR}/${RADARVU_LIB_NAME})
 set(RADARVU_RUST_SOURCES ${CMAKE_SOURCE_DIR}/dsp/src/lib.rs ${CMAKE_SOURCE_DIR}/dsp/src/loudness.rs ${CMAKE_SOURCE_DIR}/dsp/src/extra.rs ${CMAKE_SOURCE_DIR}/dsp/Cargo.toml)
 add_custom_command(
     OUTPUT ${RADARVU_LIB}
     COMMAND ${RADARVU_CARGO} build --release --manifest-path ${CMAKE_SOURCE_DIR}/dsp/Cargo.toml
             --target-dir ${CMAKE_BINARY_DIR}/dsp-target
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/dsp-target/release/libradarvu_dsp.a ${RADARVU_LIB}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/dsp-target/release/${RADARVU_LIB_NAME} ${RADARVU_LIB}
     DEPENDS ${RADARVU_RUST_SOURCES}
     COMMENT "Building RadarVU Rust DSP")
 add_custom_target(radarvu_dsp DEPENDS ${RADARVU_LIB})
@@ -81,5 +86,8 @@ if(RADARVU_BUILD_QA)
     target_include_directories(RadarVU_QA PRIVATE plugin)
     target_compile_definitions(RadarVU_QA PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
     target_link_libraries(RadarVU_QA PRIVATE ${RADARVU_LIB} juce::juce_audio_utils juce::juce_recommended_config_flags)
+    if(WIN32)
+        target_link_libraries(RadarVU_QA PRIVATE ws2_32 userenv ntdll bcrypt advapi32)
+    endif()
     add_dependencies(RadarVU_QA radarvu_dsp)
 endif()

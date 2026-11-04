@@ -7,3 +7,10 @@
 # QA host-suite runs and rendered evidence (large / derived; canonical screenshots live in docs/images/)
 /qa/*/reaper*/
 /qa/*/*.png
+
+# QA evidence: keep reports and logs, drop bulky media and host project files
+qa/**/*.wav
+qa/**/*.ppm
+qa/**/*.rpp
+qa/**/*.pid
+qa/**/*.reapeaks
