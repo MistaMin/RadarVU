@@ -95,4 +95,4 @@ On the level meters, 0 is the REF setting.
 
 ## Version
 
-This manual describes RadarVU 1.0.0 plus the unreleased resolution and skin menus (see the changelog).
+This manual describes RadarVU 1.0.1. See the changelog for what changed since 1.0.0.

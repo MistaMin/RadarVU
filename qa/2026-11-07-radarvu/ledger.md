@@ -1,6 +1,6 @@
 # RadarVU scope ledger: radar resolution and colour skins (2026-11-07)
 
-Source of scope: the earlier ChatGPT session's request, "the radar looks like a blob, it needs to be much finer", and the uncommitted work it left. Claude took the work over, checked it end to end and finished the documentation. Nothing here is committed or released yet.
+Source of scope: the earlier session's request, "the radar looks like a blob, it needs to be much finer", and the uncommitted work it left. That work was taken over, checked end to end and its documentation finished. Nothing here is committed or released yet.
 
 Summary: 17 rows verified, 4 unverified (reason given), 0 failed. Exceptions: 1 NEW (below).
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 (2026-11-07)
 
 - Radar resolution menu: 180, 360, 720 (default) or 1440 points per revolution, sampled at their capture times independent of the host buffer size. A thin contour stays visible over the dimmed fill. In Loudness mode the trace follows the 400 ms momentary measurement.
 - Six colour skins (Stock Dark, Retro Console, Ivory Terminal, Matrix, Modern Console, Studio Amber) covering Radar and Spectrum modes, controls and menus.

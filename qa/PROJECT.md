@@ -4,7 +4,7 @@ Build layout expected next to this repository:
 
 | Path | What |
 |---|---|
-| `../audiogridder/JUCE` | JUCE 8 checkout (used by CMake) |
+| `../audiogridder/JUCE` | JUCE checkout (used by CMake) |
 | `../instruments/GoodLookinDri` | Drawing toolkit (Rust path dependency) |
 
 Rust (`cargo`) and CMake 3.22+ are required.
@@ -26,7 +26,7 @@ cmake --build build --target RadarVU_Standalone -j 8
 
 ## Formats
 
-macOS: VST3, AU, Standalone. Windows/Linux: VST3, Standalone. AAX, CLAP and LV2 are not wired yet (follow-up).
+macOS: VST3, AU, CLAP, LV2, AAX (when `../aax-sdk-2-8-1` is present) and Standalone. Windows/Linux: VST3, LV2, Standalone. JUCE comes from `../audiogridder/JUCE`.
 
 ## Scope documents
 

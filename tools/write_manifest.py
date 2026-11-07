@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Writes opengrid-manifest.json (schema 2, the format the Plugin Manager reads) for the macOS pkg.
+"""Writes opengrid-manifest.json (schema 2, the format the Plugin Manager reads) for the macOS bundles zip.
 Usage: write_manifest.py <release-dir> <version> <min_os>"""
 import hashlib, json, os, sys, datetime
 d, version, min_os = sys.argv[1:4]
-name = f"RadarVU-{version}-macos.pkg"
+name = f"RadarVU-{version}-macos.zip"
 path = os.path.join(d, name)
 manifest = {
     "schema": 2, "plugin": "RadarVU", "version": version,
     "released": datetime.date.today().isoformat(),
     "highlights": [
-        "Polar radar display with a sweeping history of the signal",
-        "VU, RMS, K-System, DIN, Nordic, BBC and EBU meters on the reference ballistics",
-        "Loudness panel to ITU-R BS.1770-5, EBU Tech 3341 and 3342, plus stereo goniometer and spectrum",
-        "Passes the audio through unchanged",
+        "Radar resolution menu (180 to 1440 points per revolution) for a much finer trace",
+        "Six colour skins: Stock Dark, Retro Console, Ivory Terminal, Matrix, Modern Console, Studio Amber",
+        "Pick any target loudness (-40 to -6 LUFS) and true-peak ceiling (-6 to 0 dBTP), or type a value",
+        "Fixed the readout cards running past the bottom of the panel",
         "VST3, Audio Unit, CLAP, LV2, AAX and Standalone for macOS"],
     "archives": [{
-        "os": "macos", "arch": ["universal"], "min_os": min_os, "name": name,
+        "os": "macos", "arch": ["universal"], "min_os": min_os,
+        "build_class": "modern" if tuple(int(x) for x in min_os.split(".")) >= (11, 0) else "legacy", "name": name,
         "size": os.path.getsize(path), "sha256": hashlib.sha256(open(path, "rb").read()).hexdigest(),
         "installs": [
             {"format": "app", "path": "Applications/RadarVU.app"},

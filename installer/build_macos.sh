@@ -26,7 +26,7 @@ AAX_WCGUID=${RADARVU_AAX_WCGUID:-"77661BB0-D60F-11F1-804C-005056928F3B"}   # Rad
 SKILL_DIR=${SKILL_DIR:-"/Volumes/Developer/Dev Projects/.agents/skills/Make-Plugin-Release"}
 WRAPTOOL=${RADARVU_WRAPTOOL:-/Applications/PACEAntiPiracy/Eden/Fusion/Current/bin/wraptool}
 RELEASE_DIR=${RELEASE_DIR:-"/Volumes/Developer/OpenGrid/Release Binaries/MistaMin/RadarVU/$VERSION"}
-MANIFEST_TOOL=${MANIFEST_TOOL:-"$ROOT/../OpenGridder-Rust/tools/opengrid_manifest.py"}
+MANIFEST_TOOL=${MANIFEST_TOOL:-"$ROOT/../opengridder-old/OpenGridder-Rust/tools/opengrid_manifest.py"}
 export PATH="/opt/homebrew/bin:$HOME/.cargo/bin:$PATH"
 
 echo "==> RadarVU $VERSION: configure and build (universal)"
@@ -47,7 +47,7 @@ AAX=0; [ -d "$ART/AAX/RadarVU.aaxplugin" ] && AAX=1
 
 # Mark the build class and minimum system in each bundle's Info.plist (before signing: editing it later
 # breaks the signature). The manifest tool reads these and checks them against the Mach-O load commands.
-STAMP=${STAMP_TOOL:-"$ROOT/../OpenGridder-Rust/scripts/stamp-build-class.sh"}
+STAMP=${STAMP_TOOL:-"$ROOT/../opengridder-old/OpenGridder-Rust/scripts/stamp-build-class.sh"}
 for b in "$ART/VST3/RadarVU.vst3" "$ART/AU/RadarVU.component" "$ART/CLAP/RadarVU.clap" "$ART/Standalone/RadarVU.app"; do
   "$STAMP" "$b" modern 11.0
 done
