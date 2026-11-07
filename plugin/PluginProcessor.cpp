@@ -2,8 +2,29 @@
 #include "PluginEditor.h"
 
 namespace {
-constexpr float TARGETS[4] = { -23.0f, -18.0f, -16.0f, -14.0f };
-constexpr float CEILINGS[3] = { -1.0f, -2.0f, -3.0f };
+// Earlier versions offered only these values as choice indices; kept to migrate old projects.
+constexpr float LEGACY_TARGETS[4] = { -23.0f, -18.0f, -16.0f, -14.0f };
+constexpr float LEGACY_CEILINGS[3] = { -1.0f, -2.0f, -3.0f };
+
+int nearestLegacyIndex(const float* table, int n, float value) {
+    int best = 0;
+    for (int i = 1; i < n; ++i)
+        if (std::abs(table[i] - value) < std::abs(table[best] - value)) best = i;
+    return best;
+}
+
+std::unique_ptr<juce::AudioParameterFloat> makeLevelParameter(const char* id, const char* name, float lo, float hi,
+                                                              float fallback, const juce::String& unit) {
+    juce::NormalisableRange<float> range(lo, hi, 0.1f);
+    auto attributes = juce::AudioParameterFloatAttributes()
+        .withLabel(unit)
+        .withStringFromValueFunction([unit](float v, int) { return juce::String(v, 1) + " " + unit; })
+        .withValueFromStringFunction([lo, hi, fallback](const juce::String& text) {
+            const auto t = text.retainCharacters("0123456789.-+\u2212").replace(juce::String::charToString(0x2212), "-");
+            return t.containsAnyOf("0123456789") ? juce::jlimit(lo, hi, t.getFloatValue()) : fallback;
+        });
+    return std::make_unique<juce::AudioParameterFloat>(id, name, range, fallback, attributes);
+}
 constexpr float WINDOWS[5] = { 5.0f, 10.0f, 15.0f, 20.0f, 30.0f };
 constexpr float REFERENCES[3] = { -20.0f, -18.0f, -14.0f };
 constexpr int HISTORY_POINTS[4] = { 180, 360, 720, 1440 };
@@ -21,11 +42,9 @@ RadarVuProcessor::RadarVuProcessor()
     referenceP = new juce::AudioParameterChoice("reference", "Reference level",
         { "-20 dBFS", "-18 dBFS", "-14 dBFS" }, 1);
     addParameter(referenceP);
-    targetP = new juce::AudioParameterChoice("target", "Target level",
-        { "-23 LUFS", "-18 LUFS", "-16 LUFS", "-14 LUFS" }, 3);
+    targetP = makeLevelParameter("target", "Target level", targetMin, targetMax, -14.0f, "LUFS").release();
     addParameter(targetP);
-    ceilingP = new juce::AudioParameterChoice("ceiling", "True-peak ceiling",
-        { "-1 dBTP", "-2 dBTP", "-3 dBTP" }, 0);
+    ceilingP = makeLevelParameter("ceiling", "True-peak ceiling", ceilingMin, ceilingMax, -1.0f, "dBTP").release();
     addParameter(ceilingP);
     windowP = new juce::AudioParameterChoice("window", "Sweep window",
         { "5 s", "10 s", "15 s", "20 s", "30 s" }, 1);
@@ -52,8 +71,8 @@ RadarVuProcessor::~RadarVuProcessor() {
 
 void RadarVuProcessor::readParams(RadarVuSetup& s) const {
     s.mode = modeP->getIndex();
-    s.target = TARGETS[targetP->getIndex()];
-    s.ceiling = CEILINGS[ceilingP->getIndex()];
+    s.target = targetP->get();
+    s.ceiling = ceilingP->get();
     s.window = WINDOWS[windowP->getIndex()];
     s.kind = meterTypeP->getIndex();
     s.reference_db = REFERENCES[referenceP->getIndex()];
@@ -70,9 +89,23 @@ void RadarVuProcessor::pullSetup() {
     radarvu_setup(meter, &s);
 }
 
+void RadarVuProcessor::setTarget(float lufs) {
+    targetP->beginChangeGesture();
+    targetP->setValueNotifyingHost(targetP->convertTo0to1(juce::jlimit(targetMin, targetMax, lufs)));
+    targetP->endChangeGesture();
+    pullSetup();
+}
+
+void RadarVuProcessor::setCeiling(float dbtp) {
+    ceilingP->beginChangeGesture();
+    ceilingP->setValueNotifyingHost(ceilingP->convertTo0to1(juce::jlimit(ceilingMin, ceilingMax, dbtp)));
+    ceilingP->endChangeGesture();
+    pullSetup();
+}
+
 void RadarVuProcessor::cycle(int which) {
-    juce::AudioParameterChoice* p = which == 0 ? meterTypeP : which == 1 ? referenceP
-                                   : which == 2 ? targetP : which == 3 ? ceilingP : windowP;
+    if (which != 0 && which != 1 && which != 4) return; // target and ceiling are set by value, not stepped
+    juce::AudioParameterChoice* p = which == 0 ? meterTypeP : which == 1 ? referenceP : windowP;
     const int n = p->choices.size();
     if (n < 2) return;
     const int next = (p->getIndex() + 1) % n;
@@ -126,7 +159,15 @@ void RadarVuProcessor::getStateInformation(juce::MemoryBlock& destData) {
         // "index" is kept for readers of the earlier <P> layout.
         auto* e = root->createNewChildElement("PARAM");
         e->setAttribute("id", p->getParameterID());
-        e->setAttribute("value", p->getIndex());
+        if (auto* c = dynamic_cast<juce::AudioParameterChoice*>(p)) {
+            e->setAttribute("value", c->getIndex());
+        } else if (auto* f = dynamic_cast<juce::AudioParameterFloat*>(p)) {
+            // "real" is the exact value; "value" is the nearest earlier choice index for old readers.
+            const bool isTarget = f == targetP;
+            e->setAttribute("real", (double) f->get());
+            e->setAttribute("value", isTarget ? nearestLegacyIndex(LEGACY_TARGETS, 4, f->get())
+                                              : nearestLegacyIndex(LEGACY_CEILINGS, 3, f->get()));
+        }
     }
     copyXmlToBinary(*root, destData);
 }
@@ -143,9 +184,18 @@ void RadarVuProcessor::setStateInformation(const void* data, int sizeInBytes) {
             const auto id = e->getStringAttribute("id");
             for (auto* p : params()) {
                 if (p->getParameterID() != id) continue;
-                const int n = p->choices.size();
-                const int index = juce::jlimit(0, n - 1, old ? e->getIntAttribute("index") : e->getIntAttribute("value"));
-                if (n > 1) p->setValueNotifyingHost((float) index / (float) (n - 1));
+                const int storedIndex = old ? e->getIntAttribute("index") : e->getIntAttribute("value");
+                if (auto* c = dynamic_cast<juce::AudioParameterChoice*>(p)) {
+                    const int n = c->choices.size();
+                    if (n > 1) c->setValueNotifyingHost((float) juce::jlimit(0, n - 1, storedIndex) / (float) (n - 1));
+                } else if (auto* f = dynamic_cast<juce::AudioParameterFloat*>(p)) {
+                    // Projects saved before these were free values only hold a choice index.
+                    float value;
+                    if (e->hasAttribute("real")) value = (float) e->getDoubleAttribute("real");
+                    else if (f == targetP) value = LEGACY_TARGETS[juce::jlimit(0, 3, storedIndex)];
+                    else value = LEGACY_CEILINGS[juce::jlimit(0, 2, storedIndex)];
+                    f->setValueNotifyingHost(f->convertTo0to1(juce::jlimit(f->range.start, f->range.end, value)));
+                }
             }
         }
         pullSetup();

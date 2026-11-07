@@ -30,7 +30,7 @@ The right-hand panel reads **Momentary**, **Short-Term**, **Integrated**, **True
 - **ArcVu's full measurement set.** VU (IEC 60268-17 galvanometer), RMS absolute dBFS with an AES-17 option, K-12/K-14/K-20, and the DIN/Nordic/BBC/EBU peak-programme meters (ITU-R BS.645-2, EBU Tech 3205-E with slow mode), plus digital peak + hold, a 3-sample over counter, clip, and a phase-correlation gauge.
 - **Loudness to ITU-R BS.1770-5** (K-weighting, gating) with the EBU Tech 3341 time scales and Tech 3342 loudness range, and 4× oversampled true peak. The engine is the verified implementation shared with ArcVu and is checked against the EBU 3341/3342 calibration signals.
 - **Radar and Spectrum display modes** — the radar is a filled multicolour polar history (deep-blue → cyan → green → amber → orange → red heat ramp), and Spectrum is a full multicolour FFT analyser. Both freely resizable, and the fill / FFT can be toggled off.
-- **Clickable header** to pick the meter type (VU…EBU, Loudness), the reference (−20/−18/−14 dBFS), the loudness target (−23/−18/−16/−14 LUFS), true-peak ceiling (−1/−2/−3 dBTP) and sweep window (5/10/15/20/30 s), plus reset.
+- **Clickable header** to pick the meter type (VU…EBU, Loudness), the reference (−20/−18/−14 dBFS), the loudness target (presets or any value from −40 to −6 LUFS), true-peak ceiling (presets or any value from −6 to 0 dBTP) and sweep window (5/10/15/20/30 s), plus reset.
 - **Resolution and skin menus** beneath the readouts choose the radar density and one of six colour skins. Both settings are host parameters, automate, and save with the project. Changing resolution starts a fresh trail while retaining loudness statistics; changing skin retains the trail. Older projects use 720 points and Stock Dark.
 - **Layouts.** Mono and stereo. Surround and immersive layouts are not currently supported.
 - **Formats.** VST3, Audio Unit, CLAP, LV2, AAX and Standalone on macOS; VST3, LV2 and Standalone elsewhere. AAX needs the Avid AAX SDK to build and is released only after PACE signing.
@@ -64,7 +64,7 @@ Rust (`cargo`) and a JUCE checkout next to this repository are required (JUCE at
 
 ## Quality
 
-The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, AES-17, K-12, PPM, correlation), the meter ballistics suite (VU and PPM response, calibration, sample-rate and block-size invariance), and radar history timing and drawing coverage plus resolution changes, skin invariance and text contrast — 52 tests.
+The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, AES-17, K-12, PPM, correlation), the meter ballistics suite (VU and PPM response, calibration, sample-rate and block-size invariance), and radar history timing and drawing coverage plus resolution changes, skin invariance and text contrast — 54 tests.
 
 With `RADARVU_BUILD_QA=ON`, the UI audit also accepts real stereo music:
 

@@ -37,6 +37,12 @@ def read_parameters():
     for pid, name, items, default in re.findall(r'AudioParameterChoice\("(\w+)",\s*"([^"]+)",\s*\{([^}]*)\},\s*(\d+)\)', text):
         names = re.findall(r'"([^"]*)"', items)
         params[pid] = (name, ", ".join(names), names[int(default)])
+    # Free-value parameters: makeLevelParameter("id", "Name", minConstant, maxConstant, default, "unit").
+    header = (ROOT / 'plugin/PluginProcessor.h').read_text()
+    consts = {k: float(v) for k, v in re.findall(r'\b(\w+)\s*=\s*(-?[0-9.]+)f', header)}
+    for pid, name, lo, hi, default, unit in re.findall(
+            r'makeLevelParameter\("(\w+)",\s*"([^"]+)",\s*(\w+),\s*(\w+),\s*(-?[0-9.]+)f,\s*"([^"]+)"\)', text):
+        params[pid] = (name, f"{consts[lo]:g} to {consts[hi]:g} {unit}, in steps of 0.1", f"{float(default):g} {unit}")
     return params
 
 

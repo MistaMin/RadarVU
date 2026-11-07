@@ -22,14 +22,14 @@ RadarVU is available as VST3, Audio Unit (macOS), CLAP, LV2, AAX and a Standalon
 
 ### Header
 
-Click a chip in the header to change it. Each click steps to the next value, and the last value wraps to the first.
+Click a chip in the header to change it. METER, REF and SWEEP step to the next value on each click, and the last value wraps to the first. TARGET and CEILING open a menu instead.
 
 | Chip | What it does |
 |---|---|
 | METER | Selects the meter: VU, RMS, K-12, K-14, K-20, DIN, Nordic, BBC, EBU or Loudness. |
 | REF | Sets the reference level, in dBFS, that reads as 0 on the VU and peak-programme meters. |
-| TARGET | Sets the loudness target shown as the dashed green ring and used to colour the loudness readings. |
-| CEILING | Sets the true-peak ceiling. The True Peak reading turns red above it. |
+| TARGET | Sets the loudness target shown as the dashed green ring and used to colour the loudness readings. Pick a preset (−24, −23, −18, −16, −14, −11 LUFS) or choose **Custom value…** and type any value from −40 to −6 LUFS, to 0.1. |
+| CEILING | Sets the true-peak ceiling. The True Peak reading turns red above it. Pick a preset (−0.1, −0.5, −1, −2, −3 dBTP) or choose **Custom value…** and type any value from −6 to 0 dBTP, to 0.1. |
 | SWEEP | Sets the sweep window: how many seconds one turn of the radar takes. |
 | FILL | Switches the colour fill of the radar on or off. |
 | FFT | Switches the spectrum analyser on or off. |

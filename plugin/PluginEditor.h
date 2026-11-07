@@ -12,6 +12,10 @@ public:
 
 private:
     void showChoiceMenu(int parameterIndex, juce::Rectangle<int> anchor);
+    // Presets plus "Custom value..." for the target (parameter 2) and the true-peak ceiling (3).
+    void showValueMenu(int parameterIndex, juce::Point<int> screenPosition);
+    void askForValue(int parameterIndex);
+    std::shared_ptr<juce::LookAndFeel_V4> makeMenuLook() const;
     void timerCallback() override { repaint(); }
     RadarVuProcessor& proc;
     juce::ComponentBoundsConstrainer constrainer;

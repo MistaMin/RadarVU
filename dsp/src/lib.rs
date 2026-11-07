@@ -44,6 +44,15 @@ const TRACE: usize = 512;
 const MAX_POINTS: usize = 32; // 64 floats = 32 xy pairs per paint command
 const TEXT_CAP: usize = 47;
 
+/// Accepted range of the user-set loudness target (LUFS) and true-peak ceiling (dBTP).
+pub const TARGET_RANGE: (f32, f32) = (-40.0, -6.0);
+pub const CEILING_RANGE: (f32, f32) = (-6.0, 0.0);
+
+fn sane(v: f32, fallback: f32, (lo, hi): (f32, f32)) -> f32 {
+    if v.is_finite() { v.clamp(lo, hi) } else { fallback }
+}
+
+/// The values the earlier fixed lists offered, kept for migrating old projects.
 pub const TARGETS: [f32; 4] = [-23.0, -18.0, -16.0, -14.0];
 pub const CEILINGS: [f32; 3] = [-1.0, -2.0, -3.0];
 pub const WINDOWS: [f32; 5] = [5.0, 10.0, 15.0, 20.0, 30.0];
@@ -528,8 +537,9 @@ fn paint_preferences(s: &mut Scene, m: &Meter) {
 
 fn paint_tp_scale(s: &mut Scene, p: Palette, cell: Rect, tp: f32, ceiling: f32) {
     // True-peak scale -6 .. 0 dBTP under the readout, with the ceiling as a red tick.
-    let bar = Rect::new(cell.x + 16.0, cell.y + 66.0, cell.w - 32.0, 8.0);
-    let x_of = |db: f32| bar.x + ((db + 6.0) / 6.0).clamp(0.0, 1.0) * bar.w;
+    let bar = Rect::new(cell.x + 16.0, cell.y + TP_BAR_Y, cell.w - 32.0, 8.0);
+    // Ticks are 2 px wide and are kept inside the bar, so a ceiling of 0 dBTP is not cut off.
+    let x_of = |db: f32| (bar.x + ((db + 6.0) / 6.0).clamp(0.0, 1.0) * bar.w).clamp(bar.x + 1.0, bar.x + bar.w - 1.0);
     s.fill_rect(bar, p.screen, p.screen, true);
     s.stroke_round(bar, 1.0, p.tick, 1.0);
     s.fill_rect(Rect::new(x_of(ceiling) - 1.0, bar.y - 3.0, 2.0, bar.h + 6.0), p.red, p.red, true);
@@ -538,9 +548,22 @@ fn paint_tp_scale(s: &mut Scene, p: Palette, cell: Rect, tp: f32, ceiling: f32) 
     }
 }
 
+/// The readout panel and its five cards. The cards are spread evenly with the same margin above
+/// the first and below the last, so nothing touches or crosses the panel edge in any skin.
+const READOUT_PANEL: Rect = Rect { x: 616.0, y: 52.0, w: 468.0, h: 432.0 };
+const READOUT_PAD: f32 = 12.0;
+const READOUT_CELL_H: f32 = 75.0;
+const TP_BAR_Y: f32 = 62.0; // true-peak bar offset inside its card; the 14 px tick fits in the card
+
+fn readout_cells() -> [Rect; 5] {
+    let gap = (READOUT_PANEL.h - 2.0 * READOUT_PAD - 5.0 * READOUT_CELL_H) / 4.0;
+    std::array::from_fn(|i| Rect::new(READOUT_PANEL.x + READOUT_PAD + 4.0, READOUT_PANEL.y + READOUT_PAD + i as f32 * (READOUT_CELL_H + gap),
+        READOUT_PANEL.w - 2.0 * READOUT_PAD - 8.0, READOUT_CELL_H))
+}
+
 fn paint_readouts(s: &mut Scene, m: &Meter) {
     let p = skin::palette(m.skin);
-    let panel = Rect::new(616.0, 52.0, 468.0, 432.0);
+    let panel = READOUT_PANEL;
     s.fill_round(panel, p.panel_radius, p.panel, p.panel, true);
     s.stroke_round(panel, p.panel_radius, p.panel_edge, 1.5);
     if p.hardware {
@@ -561,19 +584,17 @@ fn paint_readouts(s: &mut Scene, m: &Meter) {
         ("LOUDNESS RANGE", if r.range_stable == 1 { format!("{:.1} LU", r.range) } else { "settling".to_string() },
          if r.range_stable == 1 { p.bright } else { p.dim }, false),
     ];
-    let mut y = 64.0;
-    for (label, text, colour, is_tp) in cells {
-        let cell = Rect::new(632.0, y, 436.0, 78.0);
+    for ((label, text, colour, is_tp), cell) in cells.into_iter().zip(readout_cells()) {
+        let y = cell.y;
         s.fill_round(cell, p.panel_radius.min(9.0), p.cell, p.cell_bottom, true);
         s.stroke_round(cell, p.panel_radius.min(9.0), p.panel_edge, 1.0);
-        s.text(Point::new(648.0, y + 22.0), label, p.label, 11.0, false);
-        s.text(Point::new(646.0, y + 62.0), &text, colour, 30.0, false);
+        s.text(Point::new(648.0, y + 21.0), label, p.label, 11.0, false);
+        s.text(Point::new(646.0, y + 58.0), &text, colour, 30.0, false);
         if is_tp {
             paint_tp_scale(s, p, cell, r.true_peak, m.ceiling);
         } else {
-            s.fill_rect(Rect::new(648.0, y + 68.0, 404.0, 3.0), colour, colour, true);
+            s.fill_rect(Rect::new(648.0, y + 65.0, 404.0, 3.0), colour, colour, true);
         }
-        y += 86.0;
     }
 }
 
@@ -954,8 +975,8 @@ pub extern "C" fn radarvu_setup(meter: *mut Meter, setup: *const RadarVuSetup) {
     if let Some(m) = unsafe { meter.as_mut() } {
         let s = unsafe { &*setup };
         m.mode = s.mode;
-        m.target = s.target;
-        m.ceiling = s.ceiling;
+        m.target = sane(s.target, -14.0, TARGET_RANGE);
+        m.ceiling = sane(s.ceiling, -1.0, CEILING_RANGE);
         m.set_window(s.window);
         let kind = s.kind.clamp(0, 9);
         if kind != m.kind { m.kind = kind; m.clear_history(); }
@@ -1624,5 +1645,46 @@ mod tests {
             m.radar_reading(),
             loud
         );
+    }
+
+    #[test]
+    fn readout_cards_sit_inside_the_panel_with_equal_margins() {
+        let cells = readout_cells();
+        let panel = READOUT_PANEL;
+        let top = cells[0].y - panel.y;
+        let bottom = panel.y + panel.h - (cells[4].y + cells[4].h);
+        assert!((top - READOUT_PAD).abs() < 0.01 && (bottom - READOUT_PAD).abs() < 0.01, "margins {top} / {bottom}");
+        for pair in cells.windows(2) {
+            assert!(pair[1].y - (pair[0].y + pair[0].h) > 4.0, "cards must not touch");
+        }
+        for c in cells {
+            assert!(c.x > panel.x && c.x + c.w < panel.x + panel.w);
+            // The true-peak tick (bar height 8 plus 3 px either side) must stay inside its card.
+            assert!(TP_BAR_Y - 3.0 >= 0.0 && TP_BAR_Y + 8.0 + 3.0 <= c.h, "tick leaves the card");
+        }
+    }
+
+    #[test]
+    fn target_and_ceiling_accept_any_value_inside_their_range() {
+        let mut m = Meter::new(48_000.0);
+        let mut setup = RadarVuSetup {
+            mode: 0, target: -16.5, ceiling: -2.3, window: 10.0, kind: 9,
+            reference_db: -18.0, fill_on: 1, fft_on: 1, history_points: HISTORY as i32, skin: 0,
+        };
+        radarvu_setup(&mut m, &setup);
+        assert_eq!((m.target, m.ceiling), (-16.5, -2.3));
+        setup.target = -90.0; setup.ceiling = 5.0;
+        radarvu_setup(&mut m, &setup);
+        assert_eq!((m.target, m.ceiling), (TARGET_RANGE.0, CEILING_RANGE.1));
+        setup.target = f32::NAN; setup.ceiling = f32::INFINITY;
+        radarvu_setup(&mut m, &setup);
+        assert_eq!((m.target, m.ceiling), (-14.0, -1.0), "non-finite input falls back to the defaults");
+        // A custom target and ceiling still paint inside the drawing budget in every skin.
+        setup.target = -9.5; setup.ceiling = -4.4;
+        for skin in 0..6 {
+            setup.skin = skin;
+            radarvu_setup(&mut m, &setup);
+            assert!(paint(&mut m).cmds.len() < 8192);
+        }
     }
 }

@@ -28,6 +28,16 @@ static int countChanged(const juce::Image& a, const juce::Image& b) {
 // State round trip without a host: every parameter set to a non-default value, saved with
 // getStateInformation, restored into a fresh processor with setStateInformation, then compared.
 static bool stateRoundTrip() {
+    // A fresh plug-in must start at the documented defaults, with no state restored.
+    {
+        RadarVuProcessor fresh;
+        auto* t = dynamic_cast<juce::AudioParameterFloat*>(fresh.getParameters()[2]);
+        auto* cl = dynamic_cast<juce::AudioParameterFloat*>(fresh.getParameters()[3]);
+        const bool defaultsOk = t && cl && std::abs(t->get() + 14.0f) < 0.051f && std::abs(cl->get() + 1.0f) < 0.051f;
+        std::cout << (defaultsOk ? "  PASS" : "  FAIL") << "  fresh defaults: target " << (t ? t->get() : 0.0f)
+                  << " LUFS, ceiling " << (cl ? cl->get() : 0.0f) << " dBTP (want -14 / -1)\n";
+        if (!defaultsOk) return false;
+    }
     RadarVuProcessor a;
     const float values[8] = { 0.13f, 0.5f, 0.87f, 0.24f, 0.61f, 0.98f, 1.0f, 0.8f };
     int i = 0;
@@ -38,11 +48,13 @@ static bool stateRoundTrip() {
     b.setStateInformation(blob.getData(), (int) blob.getSize());
     bool ok = true;
     for (int k = 0; k < 8; ++k) {
-        auto* pa = dynamic_cast<juce::AudioParameterChoice*>(a.getParameters()[k]);
-        auto* pb = dynamic_cast<juce::AudioParameterChoice*>(b.getParameters()[k]);
-        const bool same = pa && pb && pa->getIndex() == pb->getIndex();
-        std::cout << "  " << (same ? "PASS" : "FAIL") << "  state " << pa->getName(40) << ": saved index "
-                  << pa->getIndex() << ", restored " << pb->getIndex() << "\n";
+        auto* pa = a.getParameters()[k];
+        auto* pb = b.getParameters()[k];
+        // Compare what the user sees, which covers choice and free-value parameters alike.
+        const auto ta = pa->getText(pa->getValue(), 40), tb = pb->getText(pb->getValue(), 40);
+        const bool same = ta == tb;
+        std::cout << "  " << (same ? "PASS" : "FAIL") << "  state " << pa->getName(40) << ": saved '"
+                  << ta << "', restored '" << tb << "'\n";
         ok = ok && same;
     }
     // A project saved in the earlier <P id index> layout must still load.
@@ -60,11 +72,57 @@ static bool stateRoundTrip() {
         && dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[7])->getIndex() == 0;
     ok = ok && defaultsOk;
     std::cout << (defaultsOk ? "  PASS" : "  FAIL") << "  old project defaults: 720 points / Stock Dark\n";
+    // Old projects stored target and ceiling as choice indices: -23/-18/-16/-14 LUFS and -1/-2/-3 dBTP.
+    const juce::String oldText[6] = { {}, {}, "-16.0 LUFS", "-2.0 dBTP", {}, {} };
     for (int k = 0; k < 6; ++k) {
-        auto* pc = dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[k]);
-        const bool same = pc && pc->getIndex() == idx[k];
-        std::cout << "  " << (same ? "PASS" : "FAIL") << "  old layout " << ids[k] << ": restored " << (pc ? pc->getIndex() : -1) << ", want " << idx[k] << "\n";
+        auto* pc = c.getParameters()[k];
+        auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(pc);
+        const bool same = choiceParam ? choiceParam->getIndex() == idx[k]
+                                      : pc->getText(pc->getValue(), 40).replace(juce::String::charToString(0x2212), "-") == oldText[k];
+        std::cout << "  " << (same ? "PASS" : "FAIL") << "  old layout " << ids[k] << ": restored '"
+                  << pc->getText(pc->getValue(), 40) << "'\n";
         ok = ok && same;
+    }
+    // Free values: a custom target and ceiling survive, and the same state saved by the PARAM layout
+    // of the previous release (index only, no exact value) still maps to the old fixed values.
+    {
+        RadarVuProcessor custom;
+        custom.setTarget(-17.3f);
+        custom.setCeiling(-2.7f);
+        juce::MemoryBlock customBlob;
+        custom.getStateInformation(customBlob);
+        RadarVuProcessor restored;
+        restored.setStateInformation(customBlob.getData(), (int) customBlob.getSize());
+        auto* t = dynamic_cast<juce::AudioParameterFloat*>(restored.getParameters()[2]);
+        auto* cl = dynamic_cast<juce::AudioParameterFloat*>(restored.getParameters()[3]);
+        const bool customOk = t && cl && std::abs(t->get() + 17.3f) < 0.051f && std::abs(cl->get() + 2.7f) < 0.051f;
+        std::cout << (customOk ? "  PASS" : "  FAIL") << "  custom target/ceiling restored: "
+                  << (t ? t->get() : 0.0f) << " / " << (cl ? cl->get() : 0.0f) << "\n";
+        ok = ok && customOk;
+
+        juce::XmlElement previous("RadarVU");
+        for (auto [id, index] : { std::pair<const char*, int> { "target", 0 }, { "ceiling", 2 } }) {
+            auto* e = previous.createNewChildElement("PARAM");
+            e->setAttribute("id", id);
+            e->setAttribute("value", index);
+        }
+        juce::MemoryBlock previousBlob;
+        juce::AudioProcessor::copyXmlToBinary(previous, previousBlob);
+        RadarVuProcessor migrated;
+        migrated.setStateInformation(previousBlob.getData(), (int) previousBlob.getSize());
+        auto* mt = dynamic_cast<juce::AudioParameterFloat*>(migrated.getParameters()[2]);
+        auto* mc = dynamic_cast<juce::AudioParameterFloat*>(migrated.getParameters()[3]);
+        const bool migratedOk = mt && mc && std::abs(mt->get() + 23.0f) < 0.051f && std::abs(mc->get() + 3.0f) < 0.051f;
+        std::cout << (migratedOk ? "  PASS" : "  FAIL") << "  previous-release state migrates to -23 LUFS / -3 dBTP\n";
+        ok = ok && migratedOk;
+
+        custom.setTarget(-99.0f);
+        custom.setCeiling(7.0f);
+        auto* ct = dynamic_cast<juce::AudioParameterFloat*>(custom.getParameters()[2]);
+        auto* cc = dynamic_cast<juce::AudioParameterFloat*>(custom.getParameters()[3]);
+        const bool clampOk = ct->get() == RadarVuProcessor::targetMin && cc->get() == RadarVuProcessor::ceilingMax;
+        std::cout << (clampOk ? "  PASS" : "  FAIL") << "  out-of-range values clamp to " << ct->get() << " / " << cc->get() << "\n";
+        ok = ok && clampOk;
     }
     // Every new setting combination survives a fresh processor, not only a few representative values.
     for (int resolution = 0; resolution < 4; ++resolution) {
@@ -159,6 +217,13 @@ int main(int argc, char** argv) {
     auto hostParams = proc.getParameters();
     auto choice = [&](int i) { return dynamic_cast<juce::AudioParameterChoice*>(hostParams[i]); };
     auto setChoice = [&](int i, int index) {
+        // Target (2) and ceiling (3) are free values; the sweep uses the values the old lists offered.
+        static const float targets[4] = { -23.0f, -18.0f, -16.0f, -14.0f };
+        static const float ceilings[3] = { -1.0f, -2.0f, -3.0f };
+        if (auto* f = dynamic_cast<juce::AudioParameterFloat*>(hostParams[i])) {
+            f->setValueNotifyingHost(f->convertTo0to1(i == 2 ? targets[index] : ceilings[index]));
+            return;
+        }
         auto* p = choice(i);
         const int n = p->choices.size();
         p->setValueNotifyingHost(n > 1 ? (float) index / (float) (n - 1) : 0.0f);

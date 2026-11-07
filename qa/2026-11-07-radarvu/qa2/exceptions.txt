@@ -1,0 +1,14 @@
+# RadarVU is a pass-through meter: every RadarVU parameter changes only what is drawn.
+audio:Meter type                        # display only
+audio:Reference level                   # display only
+audio:Target level                      # display only
+audio:True-peak ceiling                 # display only
+audio:Sweep window                      # display only
+audio:Display mode                      # display only
+audio:Radar resolution                  # display only (radar points per revolution)
+audio:Colour skin                       # display only (colours)
+audio:Bypass                            # REAPER host bypass
+audio:Wet                               # REAPER host wet/dry
+visual:Bypass                           # REAPER host control
+visual:Wet                              # REAPER host control
+visual:Delta                            # REAPER host control

@@ -37,8 +37,12 @@ public:
 
     int paint(RadarVuPaint* out, int cap) const { return radarvu_paint(meter, out, cap); }
     void resetLoudness() { radarvu_reset(meter); }
-    // Cycle one of the choice parameters: 0 = meter type, 1 = reference, 2 = target, 3 = ceiling, 4 = window.
+    // Cycle one of the choice parameters: 0 = meter type, 1 = reference, 4 = window.
     void cycle(int which);
+    // Loudness target (LUFS) and true-peak ceiling (dBTP) take any value in their range.
+    static constexpr float targetMin = -40.0f, targetMax = -6.0f, ceilingMin = -6.0f, ceilingMax = 0.0f;
+    void setTarget(float lufs);
+    void setCeiling(float dbtp);
     void setMode(int index);
     void toggleFill() { fillOn = !fillOn; pullSetup(); }
     void toggleFft() { fftOn = !fftOn; pullSetup(); }
@@ -53,14 +57,14 @@ private:
     void parameterGestureChanged(int, bool) override {}
 
     void readParams(RadarVuSetup& s) const;
-    std::array<juce::AudioParameterChoice*, 8> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP, resolutionP, skinP }; }
+    std::array<juce::RangedAudioParameter*, 8> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP, resolutionP, skinP }; }
 
     RadarVuAAXExtensions aaxExtensions;
     Meter* meter = nullptr;
     juce::AudioParameterChoice* meterTypeP = nullptr;
     juce::AudioParameterChoice* referenceP = nullptr;
-    juce::AudioParameterChoice* targetP = nullptr;
-    juce::AudioParameterChoice* ceilingP = nullptr;
+    juce::AudioParameterFloat* targetP = nullptr;
+    juce::AudioParameterFloat* ceilingP = nullptr;
     juce::AudioParameterChoice* windowP = nullptr;
     juce::AudioParameterChoice* modeP = nullptr;
     juce::AudioParameterChoice* resolutionP = nullptr;
