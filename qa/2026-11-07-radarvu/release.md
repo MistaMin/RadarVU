@@ -19,5 +19,7 @@ Tests on the signed zip bytes (unpacked): AAX Validator PASS on all six tests (p
 
 Staged: copied to `Release Binaries/MistaMin/RadarVU/1.0.1/` (zip + manifest) on the owner's instruction, macOS only; no `RELEASE-READY` yet.
 
-Not done: `auval` and the REAPER AU/VST3 suites on the signed bytes (they need a temporary install in the user plug-in folders, which the owner has not approved for this round); Windows archive built on the owner's Windows machine from the `v1.0.1` tag, then added to the same manifest; Pro Tools; `RELEASE-READY`, upload, git tag and push.
+Also on the signed bytes (temporary user-folder install, removed): `auval` AU VALIDATION SUCCEEDED; REAPER suite 9 of 9 PASS on the AU (11 parameters) and on the VST3 (12 parameters, so it is this build); editor screenshot viewed. Evidence in `qa/2026-11-07-radarvu/signed/`.
+
+Not done: Windows archive built on the owner's Windows machine from the `v1.0.1` tag, then added to the same manifest; Pro Tools; `RELEASE-READY`, upload, git tag and push.
 Note: before the questions were answered, one Standalone zip was submitted to Apple and accepted; it is not part of this release.

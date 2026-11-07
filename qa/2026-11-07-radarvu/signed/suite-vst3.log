@@ -1,0 +1,22 @@
+PASS     loads VST3: RadarVU (OpenGrid), 12 parameters
+PASS     finite output peak -3.5 dBFS
+PASS     not silent rms -14.9 dBFS
+PASS     deterministic render repeat differs by -240.0 dB
+PASS     editor opens 1100x613, 0.0% animates by itself
+  Meter type                       audio=excused  visual=ok
+  Reference level                  audio=excused  visual=ok
+  Target level                     audio=excused  visual=ok
+  True-peak ceiling                audio=excused  visual=ok
+  Sweep window                     audio=excused  visual=ok
+  Display mode                     audio=excused  visual=ok
+  Radar resolution                 audio=excused  visual=ok
+  Colour skin                      audio=excused  visual=ok
+  Bypass                           audio=excused  visual=excused
+  Bypass                           audio=excused  visual=excused
+  Wet                              audio=excused  visual=excused
+  Delta                            audio=ok       visual=excused
+PASS     every parameter changes the sound 
+PASS     every parameter is shown in the GUI 
+PASS     state survives save and reopen 
+PASS     editor reopens 5 close/open cycles
+report: <qa-dir>/report.md

@@ -1,0 +1,191 @@
+{
+ "fx": "VST3: RadarVU (OpenGrid)",
+ "checks": [
+  {
+   "check": "loads",
+   "status": "PASS",
+   "detail": "VST3: RadarVU (OpenGrid), 12 parameters"
+  },
+  {
+   "check": "finite output",
+   "status": "PASS",
+   "detail": "peak -3.5 dBFS"
+  },
+  {
+   "check": "not silent",
+   "status": "PASS",
+   "detail": "rms -14.9 dBFS"
+  },
+  {
+   "check": "deterministic render",
+   "status": "PASS",
+   "detail": "repeat differs by -240.0 dB"
+  },
+  {
+   "check": "editor opens",
+   "status": "PASS",
+   "detail": "1100x613, 0.0% animates by itself"
+  },
+  {
+   "check": "every parameter changes the sound",
+   "status": "PASS",
+   "detail": ""
+  },
+  {
+   "check": "every parameter is shown in the GUI",
+   "status": "PASS",
+   "detail": ""
+  },
+  {
+   "check": "state survives save and reopen",
+   "status": "PASS",
+   "detail": ""
+  },
+  {
+   "check": "editor reopens",
+   "status": "PASS",
+   "detail": "5 close/open cycles"
+  }
+ ],
+ "params": [
+  {
+   "index": 0,
+   "name": "Meter type",
+   "ident": "0:103787401",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 20.296,
+   "visual": "ok"
+  },
+  {
+   "index": 1,
+   "name": "Reference level",
+   "ident": "1:1222328139",
+   "default": 0.5,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 20.516,
+   "visual": "ok"
+  },
+  {
+   "index": 2,
+   "name": "Target level",
+   "ident": "2:1266577809",
+   "default": 0.7647058964,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 7.826,
+   "visual": "ok"
+  },
+  {
+   "index": 3,
+   "name": "True-peak ceiling",
+   "ident": "3:660387005",
+   "default": 0.8333333135,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 21.855,
+   "visual": "ok"
+  },
+  {
+   "index": 4,
+   "name": "Sweep window",
+   "ident": "4:1359731696",
+   "default": 0.25,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 20.525,
+   "visual": "ok"
+  },
+  {
+   "index": 5,
+   "name": "Display mode",
+   "ident": "5:3357091",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 24.085,
+   "visual": "ok"
+  },
+  {
+   "index": 6,
+   "name": "Radar resolution",
+   "ident": "6:547453100",
+   "default": 0.6666666865,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 20.552,
+   "visual": "ok"
+  },
+  {
+   "index": 7,
+   "name": "Colour skin",
+   "ident": "7:3532157",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 25.285,
+   "visual": "ok"
+  },
+  {
+   "index": 8,
+   "name": "Bypass",
+   "ident": "8:1652125811",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 22.122,
+   "visual": "excused"
+  },
+  {
+   "index": 9,
+   "name": "Bypass",
+   "ident": "9:bypass",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -240.0,
+   "audio": "excused",
+   "visualChange": 19.725,
+   "visual": "excused"
+  },
+  {
+   "index": 10,
+   "name": "Wet",
+   "ident": "10:wet",
+   "default": 1,
+   "context": "",
+   "audioDiffDb": -3.5,
+   "audio": "excused",
+   "visualChange": 22.172,
+   "visual": "excused"
+  },
+  {
+   "index": 11,
+   "name": "Delta",
+   "ident": "11:delta",
+   "default": 0,
+   "context": "",
+   "audioDiffDb": -3.5,
+   "audio": "ok",
+   "visualChange": 4.764,
+   "visual": "excused"
+  }
+ ],
+ "info": {
+  "latency": "0",
+  "numParams": 12,
+  "fx": 0,
+  "name": "VST3: RadarVU (OpenGrid)"
+ },
+ "failed": []
+}

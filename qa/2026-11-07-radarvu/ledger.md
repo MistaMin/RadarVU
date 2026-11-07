@@ -2,7 +2,7 @@
 
 Source of scope: the earlier session's request, "the radar looks like a blob, it needs to be much finer", and the uncommitted work it left. That work was taken over, checked end to end and its documentation finished. Nothing here is committed or released yet.
 
-Summary: 17 rows verified, 4 unverified (reason given), 0 failed. Exceptions: 1 NEW (below).
+Summary: 18 rows verified, 3 unverified (reason given), 0 failed. Exceptions: 1 NEW (below).
 
 | ID | Item | Code | GUI | Test / evidence (2026-11-07, this build) | Status |
 |---|---|---|---|---|---|
@@ -22,11 +22,15 @@ Summary: 17 rows verified, 4 unverified (reason given), 0 failed. Exceptions: 1 
 | S14 | Paint cost acceptable | | | Direct: p95 3.4 ms at 440 px, 8.5 ms at 1100 px, 64 ms at 4000 px offscreen | verified (4000 px is the maximum size) |
 | S16 | Fill keeps a visible age gradient and colour (blob complaint) | dsp/src/lib.rs `FILL_OLDEST_BG` / `FILL_NEWEST_BG` | radar, all skins | Newest fill was 30% heat colour (dark brown); now about 70% at the newest end fading to 15%, contour unchanged. `cargo test` 52/52 after the change; UI audit re-run, 50 PASS 0 FAIL; contact sheet viewed; README skin images regenerated from it | verified |
 | S17 | AU in a real host: auval and the REAPER suite, including free target/ceiling | AU build | all | Re-run on the final float-parameter build (`qa2/`): `auval` AU VALIDATION SUCCEEDED, Target level -40..-6 LUFS default -14 (`qa2/auval.txt`); hidden REAPER 7.80 suite on `AU: RadarVU (OpenGrid)`, 8 plug-in parameters: loads, finite, not silent, deterministic, editor opens, every parameter shown in the GUI (Target 6.3%, Ceiling 5.1%), state survives save/reopen, 5 editor reopen cycles. Editor screenshots viewed: ceiling -6.0 dBTP moves the red tick; target -40 LUFS turns the readouts red; cards inside the panel. Dev build installed temporarily with the user's consent, removed, folders verified restored | verified |
-| S18 | VST3 in a real host (REAPER) | VST3 build | | A first REAPER run on `VST3: RadarVU (OpenGrid)` loaded only 6 RadarVU parameters: the released 1.0.0 in /Library shadows the dev copy, so that log is not evidence for this build (`suite-vst3-SYSTEM-1.0.0-not-this-build.log`). VST3 coverage for this build is the JUCE VST3 host run (S13) | unverified: needs the system 1.0.0 removed or a different install location; clap-validator and pluginval not installed |
+| S18 | VST3 in a real host (REAPER) | VST3 build | | Re-run on the signed, notarised 1.0.1 zip (unpacked, installed temporarily in the user VST3 folder, then removed): hidden REAPER 7.80 suite on `VST3: RadarVU (OpenGrid)`, 12 parameters (8 plus the wrapper's 4), loads, finite, not silent, deterministic, editor opens, every parameter shown (Target 7.8%, Ceiling 21.9%), state survives save/reopen, 5 editor reopen cycles (`signed/report-vst3.md`, `signed/suite-vst3.log`). The 12-parameter count shows it is this build and not the released 1.0.0 | verified |
 | S19 | Readout cards no longer clip: equal margins inside the panel in every skin (reported by the user from a Retro Console screenshot, then confirmed to affect all skins) | dsp/src/lib.rs `readout_cells`, `READOUT_*` | readout panel, all skins, 440/1100/4000 px | Cause: five 78 px cards on an 86 px step from y=64 ended at y=486, past the panel bottom (484). New unit test `readout_cards_sit_inside_the_panel_with_equal_margins`; UI audit contact sheets and Retro Console / Ivory Terminal close-ups viewed; live Standalone window viewed | verified |
 | S20 | Target (-40..-6 LUFS) and true-peak ceiling (-6..0 dBTP) are free values: popup with presets and typed Custom value | plugin/PluginProcessor.cpp (float parameters, state migration), plugin/PluginEditor.cpp `showValueMenu` / `askForValue`; dsp `sane` clamp | TARGET and CEILING chips | `cargo test` 54/54 (clamp and range test); UI audit 54 PASS: fresh defaults -14/-1, custom -17.3/-2.7 round trip, previous-release state migrates to -23 LUFS / -3 dBTP, old `<P>` layout, out-of-range clamp; hosted VST3 loads, bit-exact audio, state round trip and editor recreation | verified (value handling) |
 | S21 | The target/ceiling popup and Custom value entry work by mouse and keyboard | plugin/PluginEditor.cpp | both chips | Not verified. A passive screenshot of the live Standalone showed TARGET -8.0 LUFS (not a preset or default) and CEILING -0.1 dBTP (a preset), consistent with the menus having been used. My own click-through was blocked by a macOS "RadarVU would like to access the microphone" dialog, which I did not answer (privacy decision for the user) | unverified: user answers the dialog, or clicks through once |
 | S15 | Docs: README, manual (menus, skins, parameter table), changelog, skin images | README.md, docs/USER_MANUAL.md, CHANGELOG.md, tools/build_user_manual.py | none | manual PDF rebuilt and its parameter table checked for both new parameters | verified |
+
+## Signed 1.0.1 bytes (release zip `RadarVU-1.0.1-macos.zip`, SHA-256 `96904c82...6cfe`)
+
+`auval` on the signed AU: AU VALIDATION SUCCEEDED (`signed/auval.txt`). REAPER suite on the signed AU: 9 of 9 PASS (`signed/suite-au.log`), VST3: 9 of 9 PASS (S18). AAX Validator on the signed AAX: 6 of 6 PASS (`signed/aaxval_summary.txt` (kept local, not committed: Avid validator output)). Minimum macOS 11.0 on arm64 and x86_64 for VST3, AU and CLAP. Temporary installs removed; the released 1.0.0 in /Library is untouched.
 
 ## Parameters in the host list
 
@@ -40,4 +44,4 @@ Meter type, Reference level, Target level, True-peak ceiling, Sweep window, Disp
 ## Not done, by decision
 
 - No version bump and no release: needs the owner to decide whether this is 1.1.0.
-- No commit.
+- Commit `303e1a8` and tag `v1.0.1` are local; nothing is pushed.
