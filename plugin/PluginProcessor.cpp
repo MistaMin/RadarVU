@@ -6,6 +6,7 @@ constexpr float TARGETS[4] = { -23.0f, -18.0f, -16.0f, -14.0f };
 constexpr float CEILINGS[3] = { -1.0f, -2.0f, -3.0f };
 constexpr float WINDOWS[5] = { 5.0f, 10.0f, 15.0f, 20.0f, 30.0f };
 constexpr float REFERENCES[3] = { -20.0f, -18.0f, -14.0f };
+constexpr int HISTORY_POINTS[4] = { 180, 360, 720, 1440 };
 }
 
 RadarVuProcessor::RadarVuProcessor()
@@ -32,6 +33,12 @@ RadarVuProcessor::RadarVuProcessor()
     modeP = new juce::AudioParameterChoice("mode", "Display mode",
         { "Radar", "Spectrum" }, 0);
     addParameter(modeP);
+    resolutionP = new juce::AudioParameterChoice("resolution", "Radar resolution",
+        { "180 points", "360 points", "720 points", "1440 points" }, 2);
+    addParameter(resolutionP);
+    skinP = new juce::AudioParameterChoice("skin", "Colour skin",
+        { "Stock Dark", "Retro Console", "Ivory Terminal", "Matrix", "Modern Console", "Studio Amber" }, 0);
+    addParameter(skinP);
 
     for (auto* p : params()) p->addListener(this);
     interleaved.reserve(4096 * 2);
@@ -52,6 +59,8 @@ void RadarVuProcessor::readParams(RadarVuSetup& s) const {
     s.reference_db = REFERENCES[referenceP->getIndex()];
     s.fill_on = fillOn ? 1 : 0;
     s.fft_on = fftOn ? 1 : 0;
+    s.history_points = HISTORY_POINTS[resolutionP->getIndex()];
+    s.skin = skinP->getIndex();
 }
 
 void RadarVuProcessor::pullSetup() {
@@ -124,6 +133,10 @@ void RadarVuProcessor::getStateInformation(juce::MemoryBlock& destData) {
 
 void RadarVuProcessor::setStateInformation(const void* data, int sizeInBytes) {
     if (auto root = getXmlFromBinary(data, sizeInBytes)) {
+        if (!root->hasTagName("RadarVU")) return;
+        // Projects made before these settings existed always reopen with their original defaults.
+        resolutionP->setValueNotifyingHost(2.0f / 3.0f);
+        skinP->setValueNotifyingHost(0.0f);
         for (auto* e : root->getChildIterator()) {
             const bool old = e->hasTagName("P");   // earlier layout: <P id index>
             if (!old && !e->hasTagName("PARAM")) continue;

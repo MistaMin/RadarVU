@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include "MusicAudit.h"
 
 static int countChanged(const juce::Image& a, const juce::Image& b) {
     const int w = juce::jmin(a.getWidth(), b.getWidth());
@@ -28,15 +29,15 @@ static int countChanged(const juce::Image& a, const juce::Image& b) {
 // getStateInformation, restored into a fresh processor with setStateInformation, then compared.
 static bool stateRoundTrip() {
     RadarVuProcessor a;
-    const float values[6] = { 0.13f, 0.5f, 0.87f, 0.24f, 0.61f, 0.98f };
+    const float values[8] = { 0.13f, 0.5f, 0.87f, 0.24f, 0.61f, 0.98f, 1.0f, 0.8f };
     int i = 0;
-    for (auto* p : a.getParameters()) if (i < 6) p->setValueNotifyingHost(values[i++]);
+    for (auto* p : a.getParameters()) if (i < 8) p->setValueNotifyingHost(values[i++]);
     juce::MemoryBlock blob;
     a.getStateInformation(blob);
     RadarVuProcessor b;
     b.setStateInformation(blob.getData(), (int) blob.getSize());
     bool ok = true;
-    for (int k = 0; k < 6; ++k) {
+    for (int k = 0; k < 8; ++k) {
         auto* pa = dynamic_cast<juce::AudioParameterChoice*>(a.getParameters()[k]);
         auto* pb = dynamic_cast<juce::AudioParameterChoice*>(b.getParameters()[k]);
         const bool same = pa && pb && pa->getIndex() == pb->getIndex();
@@ -52,17 +53,40 @@ static bool stateRoundTrip() {
     juce::MemoryBlock oldBlob;
     juce::AudioProcessor::copyXmlToBinary(old, oldBlob);
     RadarVuProcessor c;
+    c.getParameters()[6]->setValueNotifyingHost(0.0f);
+    c.getParameters()[7]->setValueNotifyingHost(1.0f);
     c.setStateInformation(oldBlob.getData(), (int) oldBlob.getSize());
+    const bool defaultsOk = dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[6])->getIndex() == 2
+        && dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[7])->getIndex() == 0;
+    ok = ok && defaultsOk;
+    std::cout << (defaultsOk ? "  PASS" : "  FAIL") << "  old project defaults: 720 points / Stock Dark\n";
     for (int k = 0; k < 6; ++k) {
         auto* pc = dynamic_cast<juce::AudioParameterChoice*>(c.getParameters()[k]);
         const bool same = pc && pc->getIndex() == idx[k];
         std::cout << "  " << (same ? "PASS" : "FAIL") << "  old layout " << ids[k] << ": restored " << (pc ? pc->getIndex() : -1) << ", want " << idx[k] << "\n";
         ok = ok && same;
     }
+    // Every new setting combination survives a fresh processor, not only a few representative values.
+    for (int resolution = 0; resolution < 4; ++resolution) {
+        for (int skin = 0; skin < 6; ++skin) {
+            a.getParameters()[6]->setValueNotifyingHost(resolution / 3.0f);
+            a.getParameters()[7]->setValueNotifyingHost(skin / 5.0f);
+            a.getStateInformation(blob);
+            RadarVuProcessor restored;
+            restored.setStateInformation(blob.getData(), (int) blob.getSize());
+            const bool same = dynamic_cast<juce::AudioParameterChoice*>(restored.getParameters()[6])->getIndex() == resolution
+                && dynamic_cast<juce::AudioParameterChoice*>(restored.getParameters()[7])->getIndex() == skin;
+            ok = ok && same;
+            std::cout << (same ? "  PASS" : "  FAIL") << "  resolution/skin state " << resolution << "/" << skin << "\n";
+        }
+    }
     return ok;
 }
 
 int main(int argc, char** argv) {
+    // Optional real programme test, using the same processor and editor as the plugin.
+    if (argc >= 4 && juce::String(argv[2]) == "--music")
+        return auditMusic(argc, argv);
     std::cout << "state round trip (no host):\n";
     const bool stateOk = stateRoundTrip();
     std::cout << (stateOk ? "state round trip: PASS\n" : "state round trip: FAIL\n");
@@ -140,31 +164,31 @@ int main(int argc, char** argv) {
         p->setValueNotifyingHost(n > 1 ? (float) index / (float) (n - 1) : 0.0f);
     };
     // Order: meter(0), reference(1), target(2), ceiling(3), window(4), mode(5).
-    const int defaults[6] = { 0, 1, 3, 0, 1, 0 };
-    const int extremes[6] = { 9, 0, 0, 2, 4, 1 };
-    const char* names[6] = { "meter", "reference", "target", "ceiling", "window", "mode" };
+    const int defaults[8] = { 0, 1, 3, 0, 1, 0, 2, 0 };
+    const int extremes[8] = { 9, 0, 0, 2, 4, 1, 3, 5 };
+    const char* names[8] = { "meter", "reference", "target", "ceiling", "window", "mode", "resolution", "skin" };
 
     // Reset the meter, apply the given parameter state, and re-feed the whole programme so every
     // render is deterministic apart from the one parameter under test.
     auto renderState = [&](const int* vals) {
         proc.resetLoudness();
-        for (int j = 0; j < 6; ++j) setChoice(j, vals[j]);
+        for (int j = 0; j < 8; ++j) setChoice(j, vals[j]);
         feedAll();
         return render();
     };
 
     bool ok = save("radarvu-radar.png", renderState(defaults));
-    int spectrumVals[6];
-    for (int j = 0; j < 6; ++j) spectrumVals[j] = defaults[j];
+    int spectrumVals[8];
+    for (int j = 0; j < 8; ++j) spectrumVals[j] = defaults[j];
     spectrumVals[5] = 1; // spectrum mode
     ok = save("radarvu-spectrum.png", renderState(spectrumVals)) && ok;
 
     juce::Image baseline = renderState(defaults);
     int failures = 0;
     std::cout << "offscreen visual sweep (baseline = defaults):" << std::endl;
-    for (int i = 0; i < 6; ++i) {
-        int vals[6];
-        for (int j = 0; j < 6; ++j) vals[j] = defaults[j];
+    for (int i = 0; i < 8; ++i) {
+        int vals[8];
+        for (int j = 0; j < 8; ++j) vals[j] = defaults[j];
         vals[i] = extremes[i];
         juce::Image changed = renderState(vals);
         const int diff = countChanged(baseline, changed);
@@ -195,8 +219,8 @@ int main(int argc, char** argv) {
     save("sweep-fill-off.png", fillOff);
     checkToggle("fill", fillOn, fillOff);
 
-    int specVals[6];
-    for (int j = 0; j < 6; ++j) specVals[j] = defaults[j];
+    int specVals[8];
+    for (int j = 0; j < 8; ++j) specVals[j] = defaults[j];
     specVals[5] = 1; // spectrum mode
     proc.setFft(true);
     juce::Image fftOn = renderState(specVals);
@@ -207,5 +231,40 @@ int main(int argc, char** argv) {
     checkToggle("fft", fftOn, fftOff);
 
     std::cout << (toggleFailures == 0 ? "toggles: fill and fft switch the GUI" : "toggles: FAILURES") << std::endl;
-    return (ok && failures == 0 && toggleFailures == 0) ? 0 : 1;
+    // Every skin in both modes at the smallest, normal and largest supported size. Feed once
+    // per skin; resizing must neither reset the history nor change a detector reading.
+    for (int skin = 0; skin < 6; ++skin) {
+        int values[8] = { 9, 1, 3, 0, 1, 0, 2, skin };
+        renderState(values);
+        for (int mode = 0; mode < 2; ++mode) {
+            setChoice(5, mode);
+            for (int width : { 440, 1100, 4000 }) {
+                const int height = juce::roundToInt(width * 560.0 / 1100.0);
+                editor->setSize(width, height);
+                juce::Image image(juce::Image::ARGB, width, height, true);
+                { juce::Graphics g(image); editor->paintEntireComponent(g, true); }
+                ok = save("skin-" + juce::String(skin) + "-" + (mode == 0 ? "radar" : "spectrum")
+                    + "-" + juce::String(width) + ".png", image) && ok;
+            }
+        }
+    }
+    editor->setSize(1100, 560);
+    // Contact sheets are rendered by the audit itself, retaining links to each full-size PNG.
+    for (const auto& mode : { "radar", "spectrum" }) {
+        for (int width : { 440, 1100, 4000 }) {
+            const int thumbWidth = width == 440 ? 440 : 660;
+            const int thumbHeight = juce::roundToInt(thumbWidth * 560.0 / 1100.0);
+            juce::Image overview(juce::Image::ARGB, thumbWidth * 3, thumbHeight * 2, true);
+            juce::Graphics g(overview);
+            for (int skin = 0; skin < 6; ++skin) {
+                auto source = juce::ImageFileFormat::loadFrom(outDir.getChildFile("skin-" + juce::String(skin)
+                    + "-" + mode + "-" + juce::String(width) + ".png"));
+                if (!source.isValid()) { ok = false; continue; }
+                g.drawImage(source, juce::Rectangle<float>((float) ((skin % 3) * thumbWidth),
+                    (float) ((skin / 3) * thumbHeight), (float) thumbWidth, (float) thumbHeight));
+            }
+            ok = save("skins-" + juce::String(mode) + "-" + juce::String(width) + ".png", overview) && ok;
+        }
+    }
+    return (stateOk && ok && failures == 0 && toggleFailures == 0) ? 0 : 1;
 }

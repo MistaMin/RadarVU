@@ -26,7 +26,7 @@ PANEL = colors.HexColor('#eef3f1')
 GROUPS = [
     ("Meter", ["meter", "reference"]),
     ("Loudness", ["target", "ceiling"]),
-    ("Display", ["window", "mode"]),
+    ("Display", ["window", "mode", "resolution", "skin"]),
 ]
 
 

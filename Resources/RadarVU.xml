@@ -18,8 +18,8 @@
 					<Cell row='1' col='4' knobID="ceiling" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='5' knobID="window" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='6' knobID="mode" inOutButtonID="" selectButtonID=""/>
-					<Cell row='1' col='7' knobID="" inOutButtonID="" selectButtonID=""/>
-					<Cell row='1' col='8' knobID="" inOutButtonID="" selectButtonID=""/>
+					<Cell row='1' col='7' knobID="resolution" inOutButtonID="" selectButtonID=""/>
+					<Cell row='1' col='8' knobID="skin" inOutButtonID="" selectButtonID=""/>
 				</Page>
 			</PageTable>
 			<PageTable type='Av1F' pgsz='48'>
@@ -30,8 +30,8 @@
 					<Cell row='1' col='4' knobID="ceiling" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='5' knobID="window" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='6' knobID="mode" inOutButtonID="" selectButtonID=""/>
-					<Cell row='1' col='7' knobID="" inOutButtonID="" selectButtonID=""/>
-					<Cell row='1' col='8' knobID="" inOutButtonID="" selectButtonID=""/>
+					<Cell row='1' col='7' knobID="resolution" inOutButtonID="" selectButtonID=""/>
+					<Cell row='1' col='8' knobID="skin" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='9' knobID="" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='10' knobID="" inOutButtonID="" selectButtonID=""/>
 					<Cell row='1' col='11' knobID="" inOutButtonID="" selectButtonID=""/>
@@ -49,6 +49,12 @@
 					<Cell row='3' col='1' knobID="target" inOutButtonID="" selectButtonID=""/>
 					<Cell row='4' col='1' knobID="ceiling" inOutButtonID="" selectButtonID=""/>
 				</Page>
+                <Page num='2'>
+                    <Cell row='1' col='1' knobID="window" inOutButtonID="" selectButtonID=""/>
+                    <Cell row='2' col='1' knobID="mode" inOutButtonID="" selectButtonID=""/>
+                    <Cell row='3' col='1' knobID="resolution" inOutButtonID="" selectButtonID=""/>
+                    <Cell row='4' col='1' knobID="skin" inOutButtonID="" selectButtonID=""/>
+                </Page>
 			</PageTable>
 		</PTLayout>
 	</PageTableLayouts>

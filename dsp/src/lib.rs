@@ -12,6 +12,8 @@ use std::os::raw::{c_float, c_int};
 
 pub mod loudness;
 mod extra;
+mod skin;
+use skin::Palette;
 
 use goodlookindri::color::Color;
 use goodlookindri::scene::{Cmd, Point, Rect, Scene};
@@ -29,9 +31,14 @@ const SCOPE_R: f32 = 216.0;
 const GONIO_CX: f32 = 115.0;
 const GONIO_CY: f32 = 415.0;
 const GONIO_R: f32 = 64.0;
-/// One momentary sample per `window / HISTORY` seconds; the sweep makes one revolution per `window`.
-/// 96 samples keeps the radar smooth while keeping the per-frame fill cheap (96 wedges).
-const HISTORY: usize = 96;
+/// One selected-meter sample per `window / history_len` seconds; the sweep makes one revolution per `window`.
+/// Default half-degree spacing; users can select 180, 360, 720 or 1440 points.
+const HISTORY: usize = 720;
+const MAX_HISTORY: usize = 1440;
+pub const HISTORY_POINTS: [usize; 4] = [180, 360, 720, 1440];
+// Adjacent fill cells share a colour; their outer edge still uses every history point. Grouping
+// four cells avoids hundreds of separately antialiased radial seams and reduces paint overhead.
+const FILL_GROUP: usize = 4;
 /// Goniometer trace buffer (decimated in the audio path).
 const TRACE: usize = 512;
 const MAX_POINTS: usize = 32; // 64 floats = 32 xy pairs per paint command
@@ -40,24 +47,6 @@ const TEXT_CAP: usize = 47;
 pub const TARGETS: [f32; 4] = [-23.0, -18.0, -16.0, -14.0];
 pub const CEILINGS: [f32; 3] = [-1.0, -2.0, -3.0];
 pub const WINDOWS: [f32; 5] = [5.0, 10.0, 15.0, 20.0, 30.0];
-
-// Palette (0xAARRGGBB).
-const BG_TOP: Color = Color(0xff07090c);
-const BG_BOTTOM: Color = Color(0xff0c1014);
-const PANEL: Color = Color(0xff0d1318);
-const PANEL_EDGE: Color = Color(0xff2a353e);
-const GRID: Color = Color(0xff1b252d);
-const TICK: Color = Color(0xff465058);
-const LABEL: Color = Color(0xff7d878e);
-const BRIGHT: Color = Color(0xffd2d8dc);
-const WHITE: Color = Color(0xfff2f6f3);
-const RED: Color = Color(0xfffa4a3c);
-const AMBER: Color = Color(0xfff0c83c);
-const GREEN: Color = Color(0xff46e16e);
-const BLUE: Color = Color(0xff5cb8e0);
-const CYAN: Color = Color(0xff45e0ff);
-const DIM: Color = Color(0xff6c777d);
-const PHOSPHOR: Color = CYAN;
 
 // ------------------------------------------------------------------------------------------------
 // Ballistic detector (ported from ArcVu). VU galvanometer (IEC 60268-17), sample peak with hold,
@@ -117,24 +106,15 @@ fn ppm_coeff(kind: i32, sr: f32) -> (f32, f32) {
     (atk, rel)
 }
 
-fn meter_colour(v: f32) -> Color {
-    if v <= -100.0 { DIM } else if v >= 0.0 { RED } else if v >= -3.0 { AMBER } else { GREEN }
+fn meter_colour(v: f32, p: Palette) -> Color {
+    if v <= -100.0 { p.dim } else if v >= 0.0 { p.red } else if v >= -3.0 { p.amber } else { p.green }
 }
 
-/// Continuous heat ramp for the radar fill: deep blue → cyan → green → amber → orange → red.
-fn level_heat(pos: f32) -> Color {
-    let t = pos.clamp(0.0, 1.0);
-    const C0: Color = Color(0xff2563eb); // blue
-    const C1: Color = Color(0xff06b6d4); // cyan
-    const C2: Color = Color(0xff22c55e); // green
-    const C3: Color = Color(0xffeab308); // amber
-    const C4: Color = Color(0xfff97316); // orange
-    const C5: Color = Color(0xffef4444); // red
-    if t < 0.18 { C0.mix(C1, t / 0.18) }
-    else if t < 0.36 { C1.mix(C2, (t - 0.18) / 0.18) }
-    else if t < 0.55 { C2.mix(C3, (t - 0.36) / 0.19) }
-    else if t < 0.75 { C3.mix(C4, (t - 0.55) / 0.20) }
-    else { C4.mix(C5, (t - 0.75) / 0.25) }
+/// Continuous six-stop heat ramp, chosen to suit the selected screen palette.
+fn level_heat(pos: f32, p: Palette) -> Color {
+    let t = pos.clamp(0.0, 1.0) * 5.0;
+    let i = (t as usize).min(4);
+    p.heat[i].mix(p.heat[i + 1], t - i as f32)
 }
 
 fn spectrum_settings() -> SpectrumSettings {
@@ -144,14 +124,14 @@ fn spectrum_settings() -> SpectrumSettings {
     s
 }
 
-fn level_colour(v: f32, target: f32) -> Color {
-    if v <= -100.0 { return DIM; }
+fn level_colour(v: f32, target: f32, p: Palette) -> Color {
+    if v <= -100.0 { return p.dim; }
     let rel = v - target;
-    if rel > 3.0 { RED } else if rel > 1.0 { AMBER } else if rel >= -1.0 { GREEN } else { BLUE }
+    if rel > 3.0 { p.red } else if rel > 1.0 { p.amber } else if rel >= -1.0 { p.green } else { p.blue }
 }
 
-fn peak_colour(v: f32, ceiling: f32) -> Color {
-    if v <= -100.0 { DIM } else if v > ceiling { RED } else if v > ceiling - 1.0 { AMBER } else { GREEN }
+fn peak_colour(v: f32, ceiling: f32, p: Palette) -> Color {
+    if v <= -100.0 { p.dim } else if v > ceiling { p.red } else if v > ceiling - 1.0 { p.amber } else { p.green }
 }
 
 fn db_text(v: f32) -> String {
@@ -163,7 +143,7 @@ fn db_text(v: f32) -> String {
 }
 
 /// The header chips, shared by the drawing code and the click hit-test so the two cannot drift.
-fn chips() -> [Rect; 10] {
+fn chips() -> [Rect; 12] {
     [
         Rect::new(150.0, 10.0, 96.0, 26.0),  // 0 meter type
         Rect::new(251.0, 10.0, 86.0, 26.0),  // 1 reference
@@ -175,6 +155,8 @@ fn chips() -> [Rect; 10] {
         Rect::new(821.0, 10.0, 72.0, 26.0),  // 7 reset
         Rect::new(898.0, 10.0, 66.0, 26.0),  // 8 radar mode
         Rect::new(969.0, 10.0, 66.0, 26.0),  // 9 spectrum mode
+        Rect::new(632.0, 504.0, 172.0, 34.0), // 10 history resolution
+        Rect::new(814.0, 504.0, 254.0, 34.0), // 11 skin
     ]
 }
 
@@ -189,10 +171,12 @@ pub struct Meter {
     reference_db: f32,
     slow_mode: bool,
     aes17: bool,
-    history: [f32; HISTORY],
+    history: [f32; MAX_HISTORY],
+    history_len: usize,
+    skin: i32,
     history_idx: usize,
-    history_acc: f32,
-    history_step: f32,
+    history_acc: f64,
+    history_step: f64,
     elapsed_frames: u64,
     trace: [[f32; 2]; TRACE],
     trace_idx: usize,
@@ -225,10 +209,12 @@ impl Meter {
             reference_db: -18.0,
             slow_mode: false,
             aes17: false,
-            history: [loudness::FLOOR; HISTORY],
+            history: [loudness::FLOOR; MAX_HISTORY],
+            history_len: HISTORY,
+            skin: 0,
             history_idx: 0,
             history_acc: 0.0,
-            history_step: 10.0 / HISTORY as f32,
+            history_step: 10.0 / HISTORY as f64,
             elapsed_frames: 0,
             trace: [[0.0; 2]; TRACE],
             trace_idx: 0,
@@ -257,9 +243,22 @@ impl Meter {
     }
 
     fn set_window(&mut self, seconds: f32) {
-        self.window = seconds.clamp(1.0, 30.0);
+        let window = seconds.clamp(1.0, 30.0);
+        if window != self.window {
+            self.window = window;
+            self.clear_history();
+        }
         self.loud.set_window(self.window);
-        self.history_step = self.window / HISTORY as f32;
+        self.history_step = self.window as f64 / self.history_len as f64;
+    }
+
+    fn set_history_points(&mut self, points: usize) {
+        let points = if HISTORY_POINTS.contains(&points) { points } else { HISTORY };
+        if self.history_len != points {
+            self.history_len = points;
+            self.history_step = self.window as f64 / points as f64;
+            self.clear_history();
+        }
     }
 
     /// The current reading of one channel for the selected meter type, in the meter's own dB.
@@ -404,35 +403,45 @@ impl Meter {
     /// Feeds the loudness engine, the ballistic detector, and advances the sweep and the trace.
     pub fn process_interleaved(&mut self, samples: &[f32], channels: usize) {
         if channels == 0 { return; }
-        self.loud.process_interleaved(samples, channels);
-        self.meter_process(samples, channels);
         let ch = channels.clamp(1, MAX_CHANNELS);
-        let dt = 1.0 / self.sample_rate;
         self.scratch.clear();
-        for frame in samples.chunks_exact(ch) {
-            let l = frame[0];
-            let r = if ch > 1 { frame[1] } else { l };
-            self.scratch.push(0.5 * (l + r)); // mono mix for the spectrum ring
-            self.elapsed_frames += 1;
-            self.history_acc += dt;
-            if self.history_acc >= self.history_step {
-                self.history_acc -= self.history_step;
+        let frames = samples.len() / ch;
+        let mut offset = 0;
+        while offset < frames {
+            // Advance both detectors only as far as the next history timestamp. Sampling after
+            // an entire host block repeated its final reading when the block spanned several bins.
+            let until_capture = ((self.history_step - self.history_acc) * self.sample_rate as f64 - 1.0e-7)
+                .ceil().max(1.0) as usize;
+            let n = until_capture.min(frames - offset);
+            let chunk = &samples[offset * ch..(offset + n) * ch];
+            self.loud.process_interleaved(chunk, ch);
+            self.meter_process(chunk, ch);
+            for frame in chunk.chunks_exact(ch) {
+                let l = frame[0];
+                let r = if ch > 1 { frame[1] } else { l };
+                self.scratch.push(0.5 * (l + r)); // mono mix for the spectrum ring
+                self.trace_dec_ct += 1;
+                if self.trace_dec_ct >= self.trace_dec {
+                    self.trace_dec_ct = 0;
+                    self.trace[self.trace_idx] = [l, r];
+                    self.trace_idx = (self.trace_idx + 1) % TRACE;
+                }
+            }
+            self.elapsed_frames += n as u64;
+            self.history_acc += n as f64 / self.sample_rate as f64;
+            if self.history_acc + 1.0e-12 >= self.history_step {
+                self.history_acc = (self.history_acc - self.history_step).max(0.0);
                 self.history[self.history_idx] = self.radar_reading();
-                self.history_idx = (self.history_idx + 1) % HISTORY;
+                self.history_idx = (self.history_idx + 1) % self.history_len;
             }
-            self.trace_dec_ct += 1;
-            if self.trace_dec_ct >= self.trace_dec {
-                self.trace_dec_ct = 0;
-                self.trace[self.trace_idx] = [l, r];
-                self.trace_idx = (self.trace_idx + 1) % TRACE;
-            }
+            offset += n;
         }
         self.spectrum_ring.push(&[self.scratch.as_slice()]);
     }
 
     /// Clears the history and sweep when the meter type changes, so the trail never mixes two scales.
     fn clear_history(&mut self) {
-        self.history = [loudness::FLOOR; HISTORY];
+        self.history = [loudness::FLOOR; MAX_HISTORY];
         self.history_idx = 0;
         self.history_acc = 0.0;
     }
@@ -455,85 +464,112 @@ impl Meter {
     }
 
     fn sweep_angle(&self) -> f32 {
-        let t = self.elapsed_frames as f32 / self.sample_rate;
-        (t / self.window) * std::f32::consts::TAU
+        let turns = self.elapsed_frames as f64 / self.sample_rate as f64 / self.window as f64;
+        (turns.fract() * std::f64::consts::TAU) as f32
+    }
+
+    fn history_angle(&self, k: usize) -> f32 {
+        // Anchor each recorded point to its capture time, not the moving sweep head.
+        self.sweep_angle() - (self.history_acc / self.window as f64) as f32 * std::f32::consts::TAU
+            - (self.history_len - 1 - k) as f32 * std::f32::consts::TAU / self.history_len as f32
     }
 }
 
 fn paint(m: &mut Meter) -> Scene {
+    let p = skin::palette(m.skin);
     let mut s = Scene::new();
-    s.fill_rect(Rect::new(0.0, 0.0, VIEW_W, VIEW_H), BG_TOP, BG_BOTTOM, true);
+    s.fill_rect(Rect::new(0.0, 0.0, VIEW_W, VIEW_H), p.bg_top, p.bg_bottom, true);
     paint_header(&mut s, m);
     paint_readouts(&mut s, m);
     match m.mode { 1 => paint_spectrum(&mut s, m), _ => paint_radar(&mut s, m) }
+    paint_preferences(&mut s, m);
     s
 }
 
-fn chip(s: &mut Scene, r: Rect, label: &str, on: bool) {
+fn chip(s: &mut Scene, p: Palette, r: Rect, label: &str, on: bool) {
     if on {
-        s.fill_round(r, 13.0, CYAN, Color(0xff1d7d9a), true);
-        s.stroke_round(r, 13.0, Color(0xff9feaff), 1.0);
-        s.text(Point::new(r.center().x, r.center().y), label, Color(0xff041016), 11.0, true);
+        s.fill_round(r, p.button_radius, p.active, p.active_bottom, true);
+        s.stroke_round(r, p.button_radius, p.phosphor, 1.0);
+        s.text(Point::new(r.center().x, r.center().y), label, p.active_text, 11.0, true);
     } else {
-        s.fill_round(r, 13.0, Color(0xff14191f), Color(0xff11161b), true);
-        s.stroke_round(r, 13.0, PANEL_EDGE, 1.0);
-        s.text(Point::new(r.center().x, r.center().y), label, LABEL, 11.0, true);
+        s.fill_round(r, p.button_radius, p.button, p.button_bottom, true);
+        s.stroke_round(r, p.button_radius, p.panel_edge, 1.0);
+        s.text(Point::new(r.center().x, r.center().y), label, p.label, 11.0, true);
     }
 }
 
 fn paint_header(s: &mut Scene, m: &Meter) {
-    s.fill_rect(Rect::new(0.0, 0.0, VIEW_W, HEADER_H), Color(0xff0a0d11), Color(0xff0a0d11), true);
-    s.line(Point::new(0.0, HEADER_H - 0.5), Point::new(VIEW_W, HEADER_H - 0.5), PANEL_EDGE, 1.0);
-    s.text(Point::new(24.0, 27.0), "RADARVU", BRIGHT, 20.0, false);
-    s.text(Point::new(26.0, 39.0), "METER · LUFS", LABEL, 10.0, false);
-    let [meter, reference, target, ceiling, window, fill, fft, reset, radar, spec] = chips();
-    chip(s, meter, &format!("METER {}", extra::kind_name(m.kind)), false);
-    chip(s, reference, &format!("REF {}", db_text(m.reference_db)), false);
-    chip(s, target, &format!("TARGET {} LUFS", db_text(m.target)), false);
-    chip(s, ceiling, &format!("CEILING {} dBTP", db_text(m.ceiling)), false);
-    chip(s, window, &format!("SWEEP {} s", m.window.round() as i32), false);
-    chip(s, fill, "FILL", m.fill_on);
-    chip(s, fft, "FFT", m.fft_on);
-    chip(s, reset, "↺ RESET", false);
-    chip(s, radar, "RADAR", m.mode == 0);
-    chip(s, spec, "SPEC", m.mode == 1);
+    let p = skin::palette(m.skin);
+    s.fill_rect(Rect::new(0.0, 0.0, VIEW_W, HEADER_H), p.header, p.header, true);
+    s.line(Point::new(0.0, HEADER_H - 0.5), Point::new(VIEW_W, HEADER_H - 0.5), p.panel_edge, 1.0);
+    s.text(Point::new(24.0, 27.0), "RADARVU", p.bright, 20.0, false);
+    s.text(Point::new(26.0, 39.0), "METER · LUFS", p.label, 10.0, false);
+    let [meter, reference, target, ceiling, window, fill, fft, reset, radar, spec, _, _] = chips();
+    chip(s, p, meter, &format!("METER {}", extra::kind_name(m.kind)), false);
+    chip(s, p, reference, &format!("REF {}", db_text(m.reference_db)), false);
+    chip(s, p, target, &format!("TARGET {} LUFS", db_text(m.target)), false);
+    chip(s, p, ceiling, &format!("CEILING {} dBTP", db_text(m.ceiling)), false);
+    chip(s, p, window, &format!("SWEEP {} s", m.window.round() as i32), false);
+    chip(s, p, fill, "FILL", m.fill_on);
+    chip(s, p, fft, "FFT", m.fft_on);
+    chip(s, p, reset, "↺ RESET", false);
+    chip(s, p, radar, "RADAR", m.mode == 0);
+    chip(s, p, spec, "SPEC", m.mode == 1);
 }
 
-fn paint_tp_scale(s: &mut Scene, cell: Rect, tp: f32, ceiling: f32) {
+fn paint_preferences(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
+    let controls = chips();
+    s.text(Point::new(633.0, 498.0), "RADAR RESOLUTION", p.label, 9.0, false);
+    s.text(Point::new(815.0, 498.0), "COLOUR SKIN", p.label, 9.0, false);
+    chip(s, p, controls[10], &format!("POINTS {}  ▾", m.history_len), false);
+    chip(s, p, controls[11], &format!("{}  ▾", skin::NAMES[m.skin as usize]), false);
+}
+
+fn paint_tp_scale(s: &mut Scene, p: Palette, cell: Rect, tp: f32, ceiling: f32) {
     // True-peak scale -6 .. 0 dBTP under the readout, with the ceiling as a red tick.
     let bar = Rect::new(cell.x + 16.0, cell.y + 66.0, cell.w - 32.0, 8.0);
     let x_of = |db: f32| bar.x + ((db + 6.0) / 6.0).clamp(0.0, 1.0) * bar.w;
-    s.fill_rect(bar, Color(0xff14181b), Color(0xff14181b), true);
-    s.stroke_round(bar, 1.0, Color(0xff3c454b), 1.0);
-    s.fill_rect(Rect::new(x_of(ceiling) - 1.0, bar.y - 3.0, 2.0, bar.h + 6.0), RED, RED, true);
+    s.fill_rect(bar, p.screen, p.screen, true);
+    s.stroke_round(bar, 1.0, p.tick, 1.0);
+    s.fill_rect(Rect::new(x_of(ceiling) - 1.0, bar.y - 3.0, 2.0, bar.h + 6.0), p.red, p.red, true);
     if tp > -100.0 {
-        s.fill_rect(Rect::new(x_of(tp) - 1.0, bar.y - 1.0, 2.0, bar.h + 2.0), WHITE, WHITE, true);
+        s.fill_rect(Rect::new(x_of(tp) - 1.0, bar.y - 1.0, 2.0, bar.h + 2.0), p.white, p.white, true);
     }
 }
 
 fn paint_readouts(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
     let panel = Rect::new(616.0, 52.0, 468.0, 432.0);
-    s.fill_round(panel, 12.0, PANEL, PANEL, true);
-    s.stroke_round(panel, 12.0, PANEL_EDGE, 1.5);
+    s.fill_round(panel, p.panel_radius, p.panel, p.panel, true);
+    s.stroke_round(panel, p.panel_radius, p.panel_edge, 1.5);
+    if p.hardware {
+        for x in [623.0, 1077.0] {
+            for y in [59.0, 477.0] {
+                s.fill_ellipse_solid(Rect::new(x - 2.5, y - 2.5, 5.0, 5.0), p.tick);
+                s.line(Point::new(x - 1.5, y), Point::new(x + 1.5, y), p.screen, 0.8);
+            }
+        }
+    }
     let r = m.loud.readings();
     // (label, value text, colour, true-peak cell?)
     let cells: [(&str, String, Color, bool); 5] = [
-        ("MOMENTARY", format!("{} LUFS", db_text(r.momentary)), level_colour(r.momentary, m.target), false),
-        ("SHORT-TERM 3 s", format!("{} LUFS", db_text(r.short_term)), level_colour(r.short_term, m.target), false),
-        ("INTEGRATED", format!("{} LUFS", db_text(r.integrated)), level_colour(r.integrated, m.target), false),
-        ("TRUE PEAK dBTP", format!("{} dBTP", db_text(r.true_peak)), peak_colour(r.true_peak, m.ceiling), true),
+        ("MOMENTARY", format!("{} LUFS", db_text(r.momentary)), level_colour(r.momentary, m.target, p), false),
+        ("SHORT-TERM 3 s", format!("{} LUFS", db_text(r.short_term)), level_colour(r.short_term, m.target, p), false),
+        ("INTEGRATED", format!("{} LUFS", db_text(r.integrated)), level_colour(r.integrated, m.target, p), false),
+        ("TRUE PEAK dBTP", format!("{} dBTP", db_text(r.true_peak)), peak_colour(r.true_peak, m.ceiling, p), true),
         ("LOUDNESS RANGE", if r.range_stable == 1 { format!("{:.1} LU", r.range) } else { "settling".to_string() },
-         if r.range_stable == 1 { BRIGHT } else { DIM }, false),
+         if r.range_stable == 1 { p.bright } else { p.dim }, false),
     ];
     let mut y = 64.0;
     for (label, text, colour, is_tp) in cells {
         let cell = Rect::new(632.0, y, 436.0, 78.0);
-        s.fill_round(cell, 9.0, Color(0xff10161b), Color(0xff0e1318), true);
-        s.stroke_round(cell, 9.0, Color(0xff232c33), 1.0);
-        s.text(Point::new(648.0, y + 22.0), label, LABEL, 11.0, false);
+        s.fill_round(cell, p.panel_radius.min(9.0), p.cell, p.cell_bottom, true);
+        s.stroke_round(cell, p.panel_radius.min(9.0), p.panel_edge, 1.0);
+        s.text(Point::new(648.0, y + 22.0), label, p.label, 11.0, false);
         s.text(Point::new(646.0, y + 62.0), &text, colour, 30.0, false);
         if is_tp {
-            paint_tp_scale(s, cell, r.true_peak, m.ceiling);
+            paint_tp_scale(s, p, cell, r.true_peak, m.ceiling);
         } else {
             s.fill_rect(Rect::new(648.0, y + 68.0, 404.0, 3.0), colour, colour, true);
         }
@@ -550,40 +586,51 @@ fn dashed_circle(s: &mut Scene, cx: f32, cy: f32, r: f32, color: Color, width: f
 }
 
 fn paint_radar(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
     let (cx, cy, r) = (SCOPE_CX, SCOPE_CY, SCOPE_R);
     // Bezel and face.
-    s.fill_ellipse_solid(Rect::new(cx - r - 10.0, cy - r - 10.0, (r + 10.0) * 2.0, (r + 10.0) * 2.0), Color(0xff10161b));
-    s.stroke_ellipse(Rect::new(cx - r - 10.0, cy - r - 10.0, (r + 10.0) * 2.0, (r + 10.0) * 2.0), PANEL_EDGE, 1.5);
-    s.fill_ellipse_solid(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), Color(0xff06090c));
-    s.stroke_ellipse(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), PHOSPHOR.with_alpha(0.35), 1.0);
+    s.fill_ellipse_solid(Rect::new(cx - r - 10.0, cy - r - 10.0, (r + 10.0) * 2.0, (r + 10.0) * 2.0), p.bezel);
+    s.stroke_ellipse(Rect::new(cx - r - 10.0, cy - r - 10.0, (r + 10.0) * 2.0, (r + 10.0) * 2.0), p.panel_edge, 1.5);
+    s.fill_ellipse_solid(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), p.screen);
+    s.stroke_ellipse(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), p.phosphor.with_alpha(0.35), 1.0);
+    if p.hardware {
+        s.stroke_ellipse(Rect::new(cx - r - 7.0, cy - r - 7.0, (r + 7.0) * 2.0, (r + 7.0) * 2.0), p.tick, 1.0);
+    }
+    if p.scanlines {
+        for y in (-212..213).step_by(4) {
+            let dy = y as f32;
+            let dx = (r * r - dy * dy).sqrt();
+            s.line(Point::new(cx - dx, cy + dy), Point::new(cx + dx, cy + dy), p.phosphor.with_alpha(0.045), 0.6);
+        }
+    }
 
     // Grid rings + labels on the selected meter's scale.
     for frac in [0.25f32, 0.5, 0.75, 1.0] {
         let rr = r * frac;
-        s.stroke_ellipse(Rect::new(cx - rr, cy - rr, rr * 2.0, rr * 2.0), GRID, 1.0);
-        s.text(Point::new(cx + 6.0, cy - rr + 6.0), extra::scale_label(m.kind, frac), LABEL, 9.0, false);
+        s.stroke_ellipse(Rect::new(cx - rr, cy - rr, rr * 2.0, rr * 2.0), p.grid, 1.0);
+        s.text(Point::new(cx + 6.0, cy - rr + 6.0), extra::scale_label(m.kind, frac), p.label, 9.0, false);
     }
     // Crosshair.
-    s.line(Point::new(cx - r, cy), Point::new(cx + r, cy), GRID, 1.0);
-    s.line(Point::new(cx, cy - r), Point::new(cx, cy + r), GRID, 1.0);
+    s.line(Point::new(cx - r, cy), Point::new(cx + r, cy), p.grid, 1.0);
+    s.line(Point::new(cx, cy - r), Point::new(cx, cy + r), p.grid, 1.0);
     // Diagonal half-spokes.
     for k in [1usize, 3, 5, 7] {
         let a = k as f32 * std::f32::consts::FRAC_PI_4;
         let (sx, sy) = (a.cos(), a.sin());
-        s.line(Point::new(cx + sx * r * 0.5, cy - sy * r * 0.5), Point::new(cx + sx * r, cy - sy * r), GRID, 1.0);
+        s.line(Point::new(cx + sx * r * 0.5, cy - sy * r * 0.5), Point::new(cx + sx * r, cy - sy * r), p.grid, 1.0);
     }
     // Outer ticks every 15 degrees.
     for k in 0..24 {
         let a = k as f32 * std::f32::consts::TAU / 24.0;
         let (sx, sy) = (a.cos(), a.sin());
-        s.line(Point::new(cx + sx * (r - 6.0), cy - sy * (r - 6.0)), Point::new(cx + sx * r, cy - sy * r), TICK, 1.0);
+        s.line(Point::new(cx + sx * (r - 6.0), cy - sy * (r - 6.0)), Point::new(cx + sx * r, cy - sy * r), p.tick, 1.0);
     }
 
     // Reference ring: the delivery target for LOUDNESS, or the 0 mark for the amplitude meters.
     if m.kind == 9 {
-        dashed_circle(s, cx, cy, r * extra::position(9, m.target), GREEN.with_alpha(0.9), 1.5);
+        dashed_circle(s, cx, cy, r * extra::position(9, m.target), p.green.with_alpha(0.9), 1.5);
     } else {
-        dashed_circle(s, cx, cy, r * extra::position(m.kind, 0.0), WHITE.with_alpha(0.35), 1.0);
+        dashed_circle(s, cx, cy, r * extra::position(m.kind, 0.0), p.white.with_alpha(0.35), 1.0);
     }
 
     // The sweep's phosphor trail, then the sweep line and head.
@@ -595,48 +642,49 @@ fn paint_radar(s: &mut Scene, m: &Meter) {
     paint_meter_readout(s, m);
 }
 
+/// Share of the screen colour mixed into the fill at the oldest and newest ends of the trail. The
+/// newest part keeps most of its heat colour; the contour drawn over it supplies the edge definition.
+const FILL_OLDEST_BG: f32 = 0.85;
+const FILL_NEWEST_BG: f32 = 0.3;
+
 fn paint_trail(s: &mut Scene, m: &Meter) {
-    let dangle = std::f32::consts::TAU / HISTORY as f32;
-    let now = m.sweep_angle();
+    let p = skin::palette(m.skin);
     let hub = Point::new(SCOPE_CX, SCOPE_CY);
+    let point = |k: usize| {
+        let i = (m.history_idx + k) % m.history_len;
+        let angle = m.history_angle(k);
+        let radius = extra::position(m.kind, m.history[i]) * SCOPE_R;
+        Point::new(SCOPE_CX + radius * angle.cos(), SCOPE_CY - radius * angle.sin())
+    };
     if m.fill_on {
-        // Filled multicolour history: each sample is a triangle from the hub to its level, coloured
-        // by the level's heat ramp and fading to the scope background with age (newest = the sweep head).
-        let bg = Color(0xff06090c);
-        for k in 0..HISTORY {
-            let i = (m.history_idx + k) % HISTORY;
-            let i2 = (m.history_idx + k + 1) % HISTORY;
-            let angle = now - (HISTORY - 1 - k) as f32 * dangle;
-            let angle2 = angle + dangle;
-            let r0 = extra::position(m.kind, m.history[i]) * SCOPE_R;
-            let r1 = extra::position(m.kind, m.history[i2]) * SCOPE_R;
-            let p0 = Point::new(SCOPE_CX + r0 * angle.cos(), SCOPE_CY - r0 * angle.sin());
-            let p1 = Point::new(SCOPE_CX + r1 * angle2.cos(), SCOPE_CY - r1 * angle2.sin());
-            let heat = level_heat(extra::position(m.kind, m.history[i]));
-            let t = k as f32 / (HISTORY - 1) as f32;
-            let colour = heat.mix(bg, 1.0 - t);
-            s.fill_poly(vec![hub, p0, p1], colour, colour);
+        // Filled multicolour history follows every sample, with the colour fading with age.
+        let bg = p.screen;
+        // The ring buffer wraps in memory, not in time: never join newest back to oldest.
+        for start in (0..m.history_len - 1).step_by(FILL_GROUP) {
+            let end = (start + FILL_GROUP).min(m.history_len - 1);
+            let middle = (start + end) / 2;
+            let i = (m.history_idx + middle) % m.history_len;
+            let heat = level_heat(extra::position(m.kind, m.history[i]), p);
+            let t = middle as f32 / (m.history_len - 1) as f32;
+            let colour = heat.mix(bg, FILL_OLDEST_BG + (FILL_NEWEST_BG - FILL_OLDEST_BG) * t);
+            let mut sector = Vec::with_capacity(end - start + 2);
+            sector.push(hub);
+            sector.extend((start..=end).map(point));
+            s.fill_poly(sector, colour, colour);
         }
-    } else {
-        // Thin monochrome phosphor trail (when the colour fill is switched off).
-        const CHUNKS: usize = 24;
-        let per = HISTORY / CHUNKS;
-        for c in 0..CHUNKS {
-            let mut seg: Vec<Point> = Vec::with_capacity(per + 2);
-            for k in 0..=per {
-                let kk = (c * per + k).min(HISTORY - 1);
-                let i = (m.history_idx + kk) % HISTORY;
-                let angle = now - (HISTORY - 1 - kk) as f32 * dangle;
-                let rr = extra::position(m.kind, m.history[i]) * SCOPE_R;
-                seg.push(Point::new(SCOPE_CX + rr * angle.cos(), SCOPE_CY - rr * angle.sin()));
-            }
-            let alpha = 0.05 + 0.85 * (c as f32 / (CHUNKS - 1) as f32);
-            s.stroke_poly(seg, PHOSPHOR.with_alpha(alpha), 1.8, false);
-        }
+    }
+    // Keep a crisp contour visible with either fill setting. Each segment fits the flat C ABI's
+    // 32-point capacity, with one shared endpoint so there are no gaps between segments.
+    for start in (0..m.history_len - 1).step_by(MAX_POINTS - 1) {
+        let end = (start + MAX_POINTS - 1).min(m.history_len - 1);
+        let seg = (start..=end).map(point).collect();
+        let alpha = 0.15 + 0.8 * end as f32 / (m.history_len - 1) as f32;
+        s.stroke_poly(seg, p.phosphor.with_alpha(alpha), 1.2, false);
     }
 }
 
 fn paint_sweep(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
     let value = m.radar_reading();
     let a = m.sweep_angle();
     let head_r = extra::position(m.kind, value) * SCOPE_R;
@@ -647,23 +695,24 @@ fn paint_sweep(s: &mut Scene, m: &Meter) {
         s.line(
             Point::new(SCOPE_CX, SCOPE_CY),
             Point::new(SCOPE_CX + aa.cos() * SCOPE_R, SCOPE_CY - aa.sin() * SCOPE_R),
-            PHOSPHOR.with_alpha(0.14 / k as f32),
+            p.phosphor.with_alpha(0.14 / k as f32),
             1.0,
         );
     }
     // Main sweep to the level head.
-    s.line(Point::new(SCOPE_CX, SCOPE_CY), Point::new(SCOPE_CX + dx * head_r, SCOPE_CY - dy * head_r), PHOSPHOR, 2.0);
-    s.fill_ellipse_solid(Rect::new(SCOPE_CX + dx * head_r - 3.0, SCOPE_CY - dy * head_r - 3.0, 6.0, 6.0), PHOSPHOR);
-    s.fill_ellipse_solid(Rect::new(SCOPE_CX - 3.0, SCOPE_CY - 3.0, 6.0, 6.0), PHOSPHOR.with_alpha(0.6));
+    s.line(Point::new(SCOPE_CX, SCOPE_CY), Point::new(SCOPE_CX + dx * head_r, SCOPE_CY - dy * head_r), p.phosphor, 2.0);
+    s.fill_ellipse_solid(Rect::new(SCOPE_CX + dx * head_r - 3.0, SCOPE_CY - dy * head_r - 3.0, 6.0, 6.0), p.phosphor);
+    s.fill_ellipse_solid(Rect::new(SCOPE_CX - 3.0, SCOPE_CY - 3.0, 6.0, 6.0), p.phosphor.with_alpha(0.6));
 }
 
 fn paint_gonio(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
     let (cx, cy, r) = (GONIO_CX, GONIO_CY, GONIO_R);
-    s.fill_ellipse_solid(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), Color(0xff080c10));
-    s.stroke_ellipse(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), PANEL_EDGE, 1.5);
-    s.line(Point::new(cx - r, cy), Point::new(cx + r, cy), GRID, 1.0);
-    s.line(Point::new(cx, cy - r), Point::new(cx, cy + r), GRID, 1.0);
-    s.text(Point::new(cx, cy - r - 8.0), "STEREO", LABEL, 9.0, true);
+    s.fill_ellipse_solid(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), p.screen);
+    s.stroke_ellipse(Rect::new(cx - r, cy - r, r * 2.0, r * 2.0), p.panel_edge, 1.5);
+    s.line(Point::new(cx - r, cy), Point::new(cx + r, cy), p.grid, 1.0);
+    s.line(Point::new(cx, cy - r), Point::new(cx, cy + r), p.grid, 1.0);
+    s.text(Point::new(cx, cy - r - 8.0), "STEREO", p.label, 9.0, true);
 
     const CHUNKS: usize = 32;
     let per = TRACE / CHUNKS;
@@ -678,42 +727,45 @@ fn paint_gonio(s: &mut Scene, m: &Meter) {
             seg.push(Point::new(cx + mid * r * 0.82, cy - side * r * 0.82));
         }
         let alpha = 0.25 + 0.6 * (c as f32 / (CHUNKS - 1) as f32);
-        s.stroke_poly(seg, PHOSPHOR.with_alpha(alpha), 1.2, false);
+        s.stroke_poly(seg, p.phosphor.with_alpha(alpha), 1.2, false);
     }
 }
 
-fn phase_gauge(s: &mut Scene, r: Rect, correlation: f32) {
-    s.fill_rect(r, Color(0xff14181b), Color(0xff14181b), true);
-    s.stroke_round(r, 2.0, Color(0xff3c454b), 1.0);
+fn phase_gauge(s: &mut Scene, p: Palette, r: Rect, correlation: f32) {
+    s.fill_rect(r, p.screen, p.screen, true);
+    s.stroke_round(r, 2.0, p.tick, 1.0);
     let t = ((correlation.clamp(-39.0, 0.0) + 39.0) / 39.0).clamp(0.0, 1.0);
     let x = r.x + t * r.w;
-    let colour = if correlation < -20.0 { RED } else { GREEN };
+    let colour = if correlation < -20.0 { p.red } else { p.green };
     s.fill_ellipse_solid(Rect::new(x - 4.0, r.center().y - 4.0, 8.0, 8.0), colour);
-    s.text(Point::new(r.right() + 8.0, r.center().y + 3.0), "PHASE", LABEL, 8.0, false);
+    s.text(Point::new(r.right() + 8.0, r.center().y + 3.0), "PHASE", p.label, 8.0, false);
 }
 
 fn paint_meter_readout(s: &mut Scene, m: &Meter) {
+    let p = skin::palette(m.skin);
     let area = Rect::new(154.0, 496.0, 432.0, 56.0);
-    s.fill_round(area, 10.0, PANEL, PANEL, true);
-    s.stroke_round(area, 10.0, PANEL_EDGE, 1.0);
+    s.fill_round(area, p.panel_radius, p.panel, p.panel, true);
+    s.stroke_round(area, p.panel_radius, p.panel_edge, 1.0);
     let cur = m.radar_reading();
     let peak = m.peak_db(0).max(m.peak_db(1));
-    let head = format!("{} {}   PK {}", extra::kind_name(m.kind), extra::signed_db(cur), extra::signed_db(peak));
-    s.text(Point::new(170.0, 528.0), &head, meter_colour(cur), 24.0, false);
-    phase_gauge(s, Rect::new(170.0, 536.0, 220.0, 10.0), m.correlation);
+    let head = format!("{} {}", extra::kind_name(m.kind), extra::signed_db(cur));
+    s.text(Point::new(170.0, 524.0), &head, meter_colour(cur, p), 22.0, false);
+    s.text(Point::new(414.0, 517.0), &format!("PK {}", extra::signed_db(peak)), p.bright, 16.0, false);
+    phase_gauge(s, p, Rect::new(170.0, 536.0, 220.0, 10.0), m.correlation);
     if m.overs > 0 {
-        s.text(Point::new(414.0, 524.0), &format!("OVER {}", m.overs), AMBER, 12.0, false);
+        s.text(Point::new(414.0, 535.0), &format!("OVER {}", m.overs), p.amber, 11.0, false);
     }
     if m.any_clip() {
-        s.text(Point::new(414.0, 538.0), "CLIP", RED, 12.0, false);
+        s.text(Point::new(510.0, 535.0), "CLIP", p.red, 11.0, false);
     }
 }
 
 fn paint_spectrum(s: &mut Scene, m: &mut Meter) {
+    let p = skin::palette(m.skin);
     let area = Rect::new(40.0, 52.0, 520.0, 432.0);
-    s.fill_round(area, 12.0, PANEL, PANEL, true);
-    s.stroke_round(area, 12.0, PANEL_EDGE, 1.5);
-    s.text(Point::new(72.0, 84.0), "SPECTRUM", LABEL, 12.0, false);
+    s.fill_round(area, p.panel_radius, p.panel, p.panel, true);
+    s.stroke_round(area, p.panel_radius, p.panel_edge, 1.5);
+    s.text(Point::new(72.0, 84.0), "SPECTRUM", p.label, 12.0, false);
     if m.fft_on {
         // Update the analyser with the audio time since the last paint (clamped so a long gap between
         // paints does not decay the whole display in one step).
@@ -721,10 +773,26 @@ fn paint_spectrum(s: &mut Scene, m: &mut Meter) {
         m.last_paint_frames = m.elapsed_frames;
         m.spectrum.update(&m.spectrum_ring, dt, m.sample_rate as f64);
         let plot = Rect::new(64.0, 104.0, 472.0, 348.0);
-        m.spectrum.paint(s, plot, 20.0, 20000.0);
-        s.text(Point::new(plot.x, plot.bottom() + 18.0), "20 Hz → 20 kHz", LABEL, 9.0, false);
+        m.spectrum.settings.range = std::array::from_fn(|i| level_heat(i as f32 / 6.0, p).0);
+        let mut spectrum = Scene::new();
+        m.spectrum.paint(&mut spectrum, plot, 20.0, 20000.0);
+        for cmd in spectrum.cmds {
+            // The toolkit emits a full-width peak-hold polyline. Split it before the flat C ABI
+            // so every frequency is drawn, rather than silently truncating after 32 points.
+            match cmd {
+                Cmd::StrokePoly { pts, width, closed, .. } if pts.len() > MAX_POINTS => {
+                    for start in (0..pts.len() - 1).step_by(MAX_POINTS - 1) {
+                        let end = (start + MAX_POINTS).min(pts.len());
+                        s.stroke_poly(pts[start..end].to_vec(), p.phosphor.with_alpha(0.4), width, false);
+                    }
+                    if closed { s.line(*pts.last().unwrap(), pts[0], p.phosphor.with_alpha(0.4), width); }
+                }
+                _ => s.cmds.push(cmd),
+            }
+        }
+        s.text(Point::new(plot.x, plot.bottom() + 18.0), "20 Hz → 20 kHz", p.label, 9.0, false);
     } else {
-        s.text(Point::new(area.center().x, area.center().y), "FFT OFF", DIM, 22.0, true);
+        s.text(Point::new(area.center().x, area.center().y), "FFT OFF", p.dim, 22.0, true);
     }
 }
 
@@ -742,6 +810,8 @@ pub struct RadarVuSetup {
     pub reference_db: c_float,
     pub fill_on: c_int,
     pub fft_on: c_int,
+    pub history_points: c_int,
+    pub skin: c_int,
 }
 
 #[repr(C)]
@@ -777,6 +847,23 @@ pub struct RadarVuPaint {
     pub npts: c_int,
     pub pts: [c_float; 64],
     pub text: [u8; 48],
+}
+
+#[repr(C)]
+pub struct RadarVuSkinColours {
+    pub background: u32,
+    pub text: u32,
+    pub highlight: u32,
+    pub highlight_text: u32,
+}
+
+#[no_mangle]
+pub extern "C" fn radarvu_skin_colours(index: c_int, out: *mut RadarVuSkinColours) {
+    if let Some(out) = unsafe { out.as_mut() } {
+        let p = skin::palette(index);
+        *out = RadarVuSkinColours { background: p.cell.0, text: p.bright.0,
+            highlight: p.active.0, highlight_text: p.active_text.0 };
+    }
 }
 
 fn pack(cmd: &Cmd) -> RadarVuPaint {
@@ -875,6 +962,8 @@ pub extern "C" fn radarvu_setup(meter: *mut Meter, setup: *const RadarVuSetup) {
         m.reference_db = s.reference_db.clamp(-36.0, 0.0);
         m.fill_on = s.fill_on != 0;
         m.fft_on = s.fft_on != 0;
+        m.set_history_points(s.history_points.max(0) as usize);
+        m.skin = s.skin.clamp(0, 5);
     }
 }
 
@@ -916,7 +1005,7 @@ pub extern "C" fn radarvu_view_size(w: *mut c_float, h: *mut c_float) {
 }
 
 /// Hit-test for the header chips. Returns 0 = nothing, 1 = meter type, 2 = reference, 3 = target,
-/// 4 = ceiling, 5 = window, 6 = fill toggle, 7 = fft toggle, 8 = reset, 9 = radar, 10 = spectrum.
+/// 4 = ceiling, 5 = window, 6 = fill, 7 = fft, 8 = reset, 9 = radar, 10 = spectrum, 11 = points, 12 = skin.
 #[no_mangle]
 pub extern "C" fn radarvu_click(x: c_float, y: c_float) -> c_int {
     let p = Point::new(x, y);
@@ -937,6 +1026,7 @@ pub extern "C" fn radarvu_paint(meter: *const Meter, out: *mut RadarVuPaint, cap
     let dest = unsafe { std::slice::from_raw_parts_mut(out, n) };
     for (slot, cmd) in dest.iter_mut().zip(scene.cmds.iter()) {
         *slot = pack(cmd);
+        if slot.kind == 10 && skin::palette(m.skin).mono { slot.flags |= 2; }
     }
     n as c_int
 }
@@ -947,6 +1037,163 @@ mod ballistics;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn radar_history_is_independent_of_host_buffer_size() {
+        for sr in [44_100.0, 96_000.0] {
+            let samples: Vec<f32> = (0..(sr as usize * 2)).flat_map(|i| {
+                let t = i as f32 / sr as f32;
+                let amp = 0.05 + 0.2 * (t * 7.0).sin().abs();
+                let v = amp * (t * 1000.0 * std::f32::consts::TAU).sin();
+                [v, v * 0.7]
+            }).collect();
+            for points in HISTORY_POINTS {
+                for kind in [0, 1, 9] {
+                    let mut reference = Meter::new(sr);
+                    reference.kind = kind;
+                    reference.set_history_points(points);
+                    reference.set_window(1.0);
+                    for chunk in samples.chunks(64 * 2) { reference.process_interleaved(chunk, 2); }
+                    for block in [512, 2048, samples.len() / 2] {
+                        let mut m = Meter::new(sr);
+                        m.kind = kind;
+                        m.set_history_points(points);
+                        m.set_window(1.0);
+                        for chunk in samples.chunks(block * 2) { m.process_interleaved(chunk, 2); }
+                        assert_eq!(m.history_idx, reference.history_idx, "{sr} Hz, kind {kind}, block {block}");
+                        for (i, (a, b)) in m.history.iter().zip(reference.history.iter()).enumerate() {
+                            assert!((a - b).abs() < 1.0e-4,
+                                "{sr} Hz, kind {kind}, block {block}, history {i}: {a} vs {b}");
+                        }
+                        let (min, max) = m.history[..points].iter().fold((f32::INFINITY, f32::NEG_INFINITY),
+                            |(lo, hi), &v| (lo.min(v), hi.max(v)));
+                        assert!(max - min > 0.5, "must retain the changing programme, not repeat the block endpoint");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn radar_capture_cadence_tracks_all_sweep_windows_and_resolutions() {
+        for points in HISTORY_POINTS {
+            for window in WINDOWS {
+                let mut m = Meter::new(48_000.0);
+                m.set_history_points(points);
+                m.set_window(window);
+                m.process_interleaved(&vec![0.1; 48_000 * 2], 2);
+                let expected = (points as f32 / window) as usize;
+                assert_eq!(m.history_idx, expected, "{points} points, window {window}");
+                assert_eq!(m.history.iter().filter(|v| **v > loudness::FLOOR).count(), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn changing_resolution_preserves_measurements_and_restarts_only_the_trail() {
+        let mut m = Meter::new(48_000.0);
+        tone(&mut m, 2.0, 0.1);
+        let before = m.loud.readings();
+        let elapsed = m.elapsed_frames;
+        let vu = m.radar_reading();
+        for points in HISTORY_POINTS {
+            m.set_history_points(points);
+            assert_eq!(m.history_len, points);
+            assert_eq!(m.history_idx, 0);
+            assert!(m.history.iter().all(|v| *v <= loudness::FLOOR));
+            assert_eq!(m.elapsed_frames, elapsed);
+            assert_eq!(m.loud.readings().momentary, before.momentary);
+            assert_eq!(m.radar_reading(), vu);
+        }
+        m.set_history_points(999);
+        assert_eq!(m.history_len, HISTORY);
+    }
+
+    #[test]
+    fn skins_preserve_history_measurements_and_fit_the_drawing_budget() {
+        let mut m = Meter::new(48_000.0);
+        tone(&mut m, 1.0, 0.1);
+        let before = m.history;
+        let reading = m.loud.readings().momentary;
+        for skin in 0..6 {
+            let setup = RadarVuSetup {
+                mode: 0, target: -14.0, ceiling: -1.0, window: 10.0, kind: 0,
+                reference_db: -18.0, fill_on: 1, fft_on: 1,
+                history_points: HISTORY as i32, skin,
+            };
+            radarvu_setup(&mut m, &setup);
+            assert_eq!(m.history, before, "skin changes must retain the trail");
+            assert_eq!(m.loud.readings().momentary, reading);
+        }
+        for skin in 0..6 {
+            m.skin = skin;
+            for points in HISTORY_POINTS {
+                m.set_history_points(points);
+                m.history.fill(-10.0);
+                for mode in [0, 1] {
+                    m.mode = mode;
+                    let scene = paint(&mut m);
+                    assert!(scene.cmds.len() < 8192);
+                    for cmd in &scene.cmds {
+                        if let Cmd::FillPoly { pts, .. } | Cmd::StrokePoly { pts, .. } = cmd {
+                            assert!(pts.len() <= MAX_POINTS, "skin {skin}, points {points}, mode {mode}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn radar_history_does_not_rotate_between_captures() {
+        let mut m = Meter::new(48_000.0);
+        m.process_interleaved(&vec![0.1; 700 * 2], 2);
+        let before = m.history_angle(HISTORY - 1);
+        let index = m.history_idx;
+        m.process_interleaved(&vec![0.1; 100 * 2], 2);
+        assert_eq!(m.history_idx, index);
+        assert!((m.history_angle(HISTORY - 1) - before).abs() < 1.0e-6);
+        assert!(m.sweep_angle() > before);
+        m.process_interleaved(&vec![0.1; 600 * 2], 2);
+        assert_eq!(m.history_idx, index + 1);
+        assert!((m.history_angle(HISTORY - 2) - before).abs() < 1.0e-6,
+            "an existing point must stay in place when the next point arrives");
+    }
+
+    #[test]
+    fn radar_contour_is_visible_with_fill_and_fits_the_paint_abi() {
+        let mut m = Meter::new(48_000.0);
+        for points in HISTORY_POINTS {
+            m.set_history_points(points);
+            m.history.fill(-10.0);
+            for fill in [false, true] {
+                m.fill_on = fill;
+                let mut scene = Scene::new();
+                paint_trail(&mut scene, &m);
+                let mut fills = 0;
+                let mut fill_edges = 0;
+                let mut edges = 0;
+                for cmd in &scene.cmds {
+                    match cmd {
+                        Cmd::FillPoly { pts, .. } => {
+                            fills += 1;
+                            assert!(pts.len() >= 3 && pts.len() <= MAX_POINTS);
+                            fill_edges += pts.len() - 2;
+                        }
+                        Cmd::StrokePoly { pts, closed, .. } => {
+                            assert!(pts.len() <= MAX_POINTS);
+                            assert!(!closed, "newest must not connect to oldest");
+                            edges += pts.len() - 1;
+                        }
+                        _ => panic!("unexpected trail command"),
+                    }
+                }
+                assert_eq!(fills, if fill { (points - 1).div_ceil(FILL_GROUP) } else { 0 });
+                assert_eq!(fill_edges, if fill { points - 1 } else { 0 });
+                assert_eq!(edges, points - 1, "every consecutive pair must appear without truncation");
+            }
+        }
+    }
 
     fn tone(m: &mut Meter, seconds: f32, amplitude: f32) {
         let frames = (seconds * m.sample_rate) as usize;
@@ -1006,6 +1253,8 @@ mod tests {
         assert_eq!(radarvu_click(857.0, 20.0), 8);   // reset
         assert_eq!(radarvu_click(931.0, 20.0), 9);   // radar
         assert_eq!(radarvu_click(1002.0, 20.0), 10); // spectrum
+        assert_eq!(radarvu_click(700.0, 521.0), 11); // resolution
+        assert_eq!(radarvu_click(900.0, 521.0), 12); // skin
         assert_eq!(radarvu_click(300.0, 300.0), 0);  // scope, no chip
     }
 

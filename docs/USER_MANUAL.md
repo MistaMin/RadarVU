@@ -36,13 +36,26 @@ Click a chip in the header to change it. Each click steps to the next value, and
 | RESET | Clears the readings: integrated loudness, loudness range, peak holds, over and clip counters, and the radar history. |
 | RADAR / SPEC | Chooses the radar scope or the spectrum display. |
 
-The first six items (METER, REF, TARGET, CEILING, SWEEP and the RADAR / SPEC choice) are host parameters, so they can be automated and are saved with your project. FILL and FFT are display switches and are not saved with the project.
+Two menus sit beneath the readouts. Click one to open it and pick a value:
+
+| Menu | What it does |
+|---|---|
+| RADAR RESOLUTION | Sets the points per revolution: 180, 360, 720 (default) or 1440, which is 2°, 1°, 0.5° or 0.25° per point. Higher values draw a finer trace. Changing it starts a fresh radar trail but keeps the loudness statistics. |
+| COLOUR SKIN | Chooses one of six skins: Stock Dark (default), Retro Console, Ivory Terminal, Matrix, Modern Console or Studio Amber. Changing it keeps the trail. |
+
+The first six items (METER, REF, TARGET, CEILING, SWEEP and the RADAR / SPEC choice) and the two menus (RADAR RESOLUTION and COLOUR SKIN) are host parameters, so they can be automated and are saved with your project. Projects saved before the menus existed reopen with 720 points and Stock Dark. FILL and FFT are display switches and are not saved with the project.
 
 ### Radar scope
 
 The radius is the selected meter's level. The rings are labelled in that meter's units. Colour follows level: blue when quiet, then cyan, green, amber, orange and red as the level rises. A dashed ring marks 0 (the reference) on the level meters, or the delivery target in Loudness mode. A bright head marks the level now, and an older part of the history fades with age.
 
 The radar plots the louder of the two channels.
+
+In Loudness mode the radar trace follows the 400 ms momentary loudness. A thin contour stays visible over the dimmed colour fill, and on its own when FILL is off.
+
+### Skins
+
+All six skins cover the radar and spectrum displays, the header chips and the menus. Retro Console, Ivory Terminal and Matrix use monospaced type and inset screens; Modern Console uses a slate frame with a pale trace; Studio Amber is a warm dark skin. Warning readouts keep distinct green, amber and red states in every skin. Screenshots of each skin are in the README.
 
 ### Stereo goniometer
 
@@ -82,4 +95,4 @@ On the level meters, 0 is the REF setting.
 
 ## Version
 
-This manual describes RadarVU 1.0.0.
+This manual describes RadarVU 1.0.0 plus the unreleased resolution and skin menus (see the changelog).

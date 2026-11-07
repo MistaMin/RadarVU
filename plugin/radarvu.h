@@ -16,6 +16,8 @@ typedef struct RadarVuSetup {
     float reference_db; // -20 / -18 / -14 dBFS
     int fill_on;        // radar colour fill on/off
     int fft_on;         // spectrum analyser on/off
+    int history_points; // 180 / 360 / 720 / 1440
+    int skin;           // 0 Stock Dark, 1 Retro Console, 2 Ivory Terminal, 3 Matrix, 4 Modern Console, 5 Studio Amber
 } RadarVuSetup;
 
 typedef struct RadarVuReadings {
@@ -34,6 +36,12 @@ typedef struct RadarVuPaint {
     unsigned char text[48];
 } RadarVuPaint;
 
+typedef struct RadarVuSkinColours {
+    uint32_t background, text, highlight, highlight_text;
+} RadarVuSkinColours;
+
+void radarvu_skin_colours(int skin, RadarVuSkinColours* out);
+
 Meter* radarvu_create(double sample_rate);
 void radarvu_destroy(Meter* meter);
 void radarvu_set_sample_rate(Meter* meter, double sample_rate);
@@ -44,7 +52,7 @@ void radarvu_process(Meter* meter, const float* interleaved, int frames, int cha
 int radarvu_paint(const Meter* meter, RadarVuPaint* out, int cap);
 void radarvu_view_size(float* w, float* h);
 // Header chip hit-test: 0 none, 1 meter type, 2 reference, 3 target, 4 ceiling, 5 window,
-// 6 fill toggle, 7 fft toggle, 8 reset, 9 radar, 10 spectrum.
+// 6 fill toggle, 7 fft toggle, 8 reset, 9 radar, 10 spectrum, 11 resolution, 12 skin.
 int radarvu_click(float x, float y);
 
 #ifdef __cplusplus

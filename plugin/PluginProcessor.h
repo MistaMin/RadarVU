@@ -53,7 +53,7 @@ private:
     void parameterGestureChanged(int, bool) override {}
 
     void readParams(RadarVuSetup& s) const;
-    std::array<juce::AudioParameterChoice*, 6> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP }; }
+    std::array<juce::AudioParameterChoice*, 8> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP, resolutionP, skinP }; }
 
     RadarVuAAXExtensions aaxExtensions;
     Meter* meter = nullptr;
@@ -63,6 +63,8 @@ private:
     juce::AudioParameterChoice* ceilingP = nullptr;
     juce::AudioParameterChoice* windowP = nullptr;
     juce::AudioParameterChoice* modeP = nullptr;
+    juce::AudioParameterChoice* resolutionP = nullptr;
+    juce::AudioParameterChoice* skinP = nullptr;
     std::vector<float> interleaved; // reused every block so processBlock never allocates
     bool fillOn = true;
     bool fftOn = true;

@@ -11,6 +11,7 @@ public:
     void mouseUp(const juce::MouseEvent&) override;
 
 private:
+    void showChoiceMenu(int parameterIndex, juce::Rectangle<int> anchor);
     void timerCallback() override { repaint(); }
     RadarVuProcessor& proc;
     juce::ComponentBoundsConstrainer constrainer;

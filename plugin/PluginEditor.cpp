@@ -79,11 +79,12 @@ void replay(juce::Graphics& g, const RadarVuPaint& cmd) {
         }
         case 10: {
             g.setColour(ink(cmd.c0));
-            const char* face = cmd.w >= 15.0f ? "Avenir Next" : "Avenir Next Condensed";
+            const juce::String face = (cmd.flags & 2) ? juce::Font::getDefaultMonospacedFontName()
+                : (cmd.w >= 15.0f ? "Avenir Next" : "Avenir Next Condensed");
             g.setFont(juce::Font(juce::FontOptions(face, cmd.w, juce::Font::plain)));
             auto text = juce::String::fromUTF8((const char*) cmd.text);
             const float box = juce::jmax(cmd.w * 5.0f, 200.0f);
-            if (cmd.flags)
+            if (cmd.flags & 1)
                 g.drawText(text, juce::Rectangle<float>(cmd.x - box * 0.5f, cmd.y - cmd.w * 0.65f, box, cmd.w * 1.35f),
                            juce::Justification::centred);
             else
@@ -131,8 +132,40 @@ void RadarVuEditor::mouseDown(const juce::MouseEvent& e) {
         case 8: proc.resetLoudness(); break;
         case 9: proc.setMode(0); break; // radar
         case 10: proc.setMode(1); break; // spectrum
+        case 11: showChoiceMenu(6, juce::Rectangle<int>(632, 504, 172, 34)); break;
+        case 12: showChoiceMenu(7, juce::Rectangle<int>(814, 504, 254, 34)); break;
         default: break;
     }
 }
 
 void RadarVuEditor::mouseUp(const juce::MouseEvent&) { repaint(); }
+
+void RadarVuEditor::showChoiceMenu(int parameterIndex, juce::Rectangle<int> anchor) {
+    auto* parameter = dynamic_cast<juce::AudioParameterChoice*>(proc.getParameters()[parameterIndex]);
+    if (!parameter) return;
+    auto look = std::make_shared<juce::LookAndFeel_V4>();
+    RadarVuSkinColours colours {};
+    auto* skin = dynamic_cast<juce::AudioParameterChoice*>(proc.getParameters()[7]);
+    radarvu_skin_colours(skin ? skin->getIndex() : 0, &colours);
+    look->setColour(juce::PopupMenu::backgroundColourId, ink(colours.background));
+    look->setColour(juce::PopupMenu::textColourId, ink(colours.text));
+    look->setColour(juce::PopupMenu::highlightedBackgroundColourId, ink(colours.highlight));
+    look->setColour(juce::PopupMenu::highlightedTextColourId, ink(colours.highlight_text));
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(look.get());
+    for (int i = 0; i < parameter->choices.size(); ++i)
+        menu.addItem(i + 1, parameter->choices[i], true, i == parameter->getIndex());
+    const auto scaled = anchor.toFloat().transformedBy(juce::AffineTransform::scale(getWidth() / 1100.0f, getHeight() / 560.0f)).toNearestInt();
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this)
+        .withTargetScreenArea(localAreaToGlobal(scaled)),
+        [safe = juce::Component::SafePointer<RadarVuEditor>(this), parameterIndex, look](int result) {
+            juce::ignoreUnused(look); // keep the menu's look-and-feel alive through its async callback
+            if (safe == nullptr || result <= 0) return;
+            auto* p = dynamic_cast<juce::AudioParameterChoice*>(safe->proc.getParameters()[parameterIndex]);
+            if (!p || result > p->choices.size()) return;
+            p->beginChangeGesture();
+            p->setValueNotifyingHost((float) (result - 1) / (float) (p->choices.size() - 1));
+            p->endChangeGesture();
+            safe->repaint();
+        });
+}
