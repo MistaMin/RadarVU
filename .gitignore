@@ -15,3 +15,10 @@
 /qa/*/zipfinal/aax/
 /qa/*/zipfinal/aax-validate.txt
 /qa/*/signed/
+
+# QA evidence: keep reports and logs, drop bulky media and host project files
+qa/**/*.wav
+qa/**/*.ppm
+qa/**/*.rpp
+qa/**/*.pid
+qa/**/*.reapeaks
