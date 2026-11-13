@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2026 OpenGrid
+# Copyright (c) 2026 Marcos Quirino Deida
 """Collect the project license and the third-party notices for the code that the shipped binaries contain.
 
 Usage: collect_licenses.py <build dir> <destination dir> <mac|win|linux>

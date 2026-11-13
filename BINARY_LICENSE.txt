@@ -1,5 +1,5 @@
 RadarVU Binary Freeware License
-Copyright (c) 2026 OpenGrid
+Copyright (c) 2026 Marcos Quirino Deida
 
 Scope
 This license applies to the official compiled RadarVU plug-ins, standalone
