@@ -67,6 +67,38 @@ static bool monoBus() {
     return ok;
 }
 
+// A host block larger than the size given to prepareToPlay is metered in chunks on the audio thread:
+// the readings must equal those of small blocks and the audio must stay untouched.
+static bool largeBlock() {
+    auto run = [](int block) {
+        RadarVuProcessor proc;
+        proc.prepareToPlay(48000.0, 256);
+        juce::AudioBuffer<float> buf(2, block), original(2, block);
+        juce::MidiBuffer midi;
+        float maxDifference = 0.0f;
+        for (int frame = 0; frame + block <= 48000 * 2; frame += block) {
+            for (int c = 0; c < 2; ++c)
+                for (int i = 0; i < block; ++i)
+                    buf.setSample(c, i, (c ? 0.15f : 0.2f) * std::sin(0.07f * (float) (frame + i)));
+            original.makeCopyOf(buf);
+            proc.processBlock(buf, midi);
+            for (int c = 0; c < 2; ++c)
+                for (int i = 0; i < block; ++i)
+                    maxDifference = juce::jmax(maxDifference, std::abs(buf.getSample(c, i) - original.getSample(c, i)));
+        }
+        RadarVuReadings r {};
+        proc.readings(r);
+        return std::tuple<float, float, float>(r.momentary, r.integrated, maxDifference);
+    };
+    const auto [smallM, smallI, smallDiff] = run(256);
+    const auto [bigM, bigI, bigDiff] = run(16000); // 16000 divides two seconds, and exceeds the 4096-frame reserve
+    const bool ok = smallM > -60.0f && std::abs(smallM - bigM) < 0.01f && std::abs(smallI - bigI) < 0.01f
+        && smallDiff == 0.0f && bigDiff == 0.0f;
+    std::cout << (ok ? "  PASS" : "  FAIL") << "  16000-frame blocks read " << bigM << " / " << bigI << " LUFS, 256-frame blocks "
+              << smallM << " / " << smallI << " LUFS, audio unchanged\n";
+    return ok;
+}
+
 // The audio thread meters while the message thread changes settings and paints: the shared meter is locked,
 // so this must finish, keep the readings finite and leave the audio untouched (a run under a thread
 // sanitiser is the stronger check; this one catches a deadlock or a torn reset).
@@ -226,8 +258,8 @@ int main(int argc, char** argv) {
     // Optional real programme test, using the same processor and editor as the plugin.
     if (argc >= 4 && juce::String(argv[2]) == "--music")
         return auditMusic(argc, argv);
-    std::cout << "mono bus:\n";
-    const bool monoOk = monoBus() && threadedUse();
+    std::cout << "processing (mono bus, large blocks, threads):\n";
+    const bool monoOk = monoBus() && largeBlock() && threadedUse();
     std::cout << "state round trip (no host):\n";
     const bool stateOk = stateRoundTrip() && monoOk;
     std::cout << (stateOk ? "state round trip: PASS\n" : "state round trip: FAIL\n");
