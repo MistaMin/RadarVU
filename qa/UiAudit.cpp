@@ -7,6 +7,10 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <atomic>
+#include <thread>
+#include <tuple>
+#include <vector>
 #include "MusicAudit.h"
 
 static int countChanged(const juce::Image& a, const juce::Image& b) {
@@ -23,6 +27,83 @@ static int countChanged(const juce::Image& a, const juce::Image& b) {
         }
     }
     return n;
+}
+
+// A mono bus is one channel (BS.1770): the same programme must read 3 dB below the identical signal on
+// both stereo channels, and every sample of each block must be metered. The programme is silent in the
+// first half of every block, so a meter that reads only part of a block shows silence. Audio stays unchanged.
+static bool monoBus() {
+    auto run = [](int channels) {
+        RadarVuProcessor proc;
+        juce::AudioProcessor::BusesLayout layout;
+        const auto set = channels == 1 ? juce::AudioChannelSet::mono() : juce::AudioChannelSet::stereo();
+        layout.inputBuses.add(set);
+        layout.outputBuses.add(set);
+        const bool layoutOk = proc.setBusesLayout(layout);
+        proc.prepareToPlay(48000.0, 512);
+        juce::AudioBuffer<float> buf(channels, 512), original(channels, 512);
+        juce::MidiBuffer midi;
+        float maxDifference = 0.0f;
+        for (int frame = 0; frame < 48000 * 2; frame += 512) {
+            for (int c = 0; c < channels; ++c)
+                for (int i = 0; i < 512; ++i)
+                    buf.setSample(c, i, i < 256 ? 0.0f : 0.2f * std::sin(0.13f * (float) (frame + i)));
+            original.makeCopyOf(buf);
+            proc.processBlock(buf, midi);
+            for (int c = 0; c < channels; ++c)
+                for (int i = 0; i < 512; ++i)
+                    maxDifference = juce::jmax(maxDifference, std::abs(buf.getSample(c, i) - original.getSample(c, i)));
+        }
+        RadarVuReadings r {};
+        proc.readings(r);
+        return std::tuple<bool, float, float>(layoutOk, r.momentary, maxDifference);
+    };
+    const auto [monoLayout, monoLoudness, monoDiff] = run(1);
+    const auto [stereoLayout, stereoLoudness, stereoDiff] = run(2);
+    const bool ok = monoLayout && stereoLayout && monoLoudness > -60.0f
+        && std::abs(monoLoudness - (stereoLoudness - 3.01f)) < 0.3f && monoDiff == 0.0f && stereoDiff == 0.0f;
+    std::cout << (ok ? "  PASS" : "  FAIL") << "  mono bus: " << monoLoudness << " LUFS, stereo " << stereoLoudness
+              << " LUFS (want 3 dB apart), audio unchanged\n";
+    return ok;
+}
+
+// The audio thread meters while the message thread changes settings and paints: the shared meter is locked,
+// so this must finish, keep the readings finite and leave the audio untouched (a run under a thread
+// sanitiser is the stronger check; this one catches a deadlock or a torn reset).
+static bool threadedUse() {
+    RadarVuProcessor proc;
+    proc.prepareToPlay(48000.0, 256);
+    std::atomic<bool> stop { false };
+    std::atomic<float> maxDifference { 0.0f };
+    std::thread audio([&] {
+        juce::AudioBuffer<float> buf(2, 256), original(2, 256);
+        juce::MidiBuffer midi;
+        for (int block = 0; !stop; ++block) {
+            for (int c = 0; c < 2; ++c)
+                for (int i = 0; i < 256; ++i) buf.setSample(c, i, 0.2f * std::sin(0.05f * (float) (block * 256 + i)));
+            original.makeCopyOf(buf);
+            proc.processBlock(buf, midi);
+            for (int i = 0; i < 256; ++i)
+                maxDifference = juce::jmax(maxDifference.load(), std::abs(buf.getSample(0, i) - original.getSample(0, i)));
+        }
+    });
+    std::vector<RadarVuPaint> cmds(8192);
+    int painted = 0;
+    for (int round = 0; round < 400; ++round) {
+        proc.getParameters()[6]->setValueNotifyingHost((round % 4) / 3.0f);        // resolution: clears the trail
+        proc.getParameters()[4]->setValueNotifyingHost((round % 5) / 4.0f);        // sweep window
+        proc.getParameters()[0]->setValueNotifyingHost((round % 10) / 9.0f);       // meter type
+        painted += proc.paint(cmds.data(), (int) cmds.size()) > 0 ? 1 : 0;
+        if (round % 50 == 0) proc.resetLoudness();
+        juce::Thread::sleep(2);
+    }
+    stop = true;
+    audio.join();
+    RadarVuReadings r {};
+    proc.readings(r);
+    const bool ok = painted == 400 && std::isfinite(r.momentary) && maxDifference.load() == 0.0f;
+    std::cout << (ok ? "  PASS" : "  FAIL") << "  audio thread against settings changes and paints: " << painted << " paints\n";
+    return ok;
 }
 
 // State round trip without a host: every parameter set to a non-default value, saved with
@@ -145,8 +226,10 @@ int main(int argc, char** argv) {
     // Optional real programme test, using the same processor and editor as the plugin.
     if (argc >= 4 && juce::String(argv[2]) == "--music")
         return auditMusic(argc, argv);
+    std::cout << "mono bus:\n";
+    const bool monoOk = monoBus() && threadedUse();
     std::cout << "state round trip (no host):\n";
-    const bool stateOk = stateRoundTrip();
+    const bool stateOk = stateRoundTrip() && monoOk;
     std::cout << (stateOk ? "state round trip: PASS\n" : "state round trip: FAIL\n");
 
     juce::File outDir = juce::File::getCurrentWorkingDirectory();

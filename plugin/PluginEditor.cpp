@@ -6,6 +6,15 @@
 namespace {
 juce::Colour ink(unsigned int argb) { return juce::Colour(argb); }
 
+// Parameters are found by ID, so reordering the processor's list cannot point a menu at the wrong one.
+template <class P>
+P* findParameter(juce::AudioProcessor& proc, const juce::String& id) {
+    for (auto* p : proc.getParameters())
+        if (auto* typed = dynamic_cast<P*>(p))
+            if (typed->paramID == id) return typed;
+    return nullptr;
+}
+
 void fillGradient(juce::Graphics& g, juce::Rectangle<float> r, unsigned int c0, unsigned int c1, bool diagonal, bool vertical) {
     if (c0 == c1) { g.setColour(ink(c0)); return; }
     auto a = ink(c0);
@@ -112,7 +121,6 @@ RadarVuEditor::RadarVuEditor(RadarVuProcessor& p) : AudioProcessorEditor(p), pro
 void RadarVuEditor::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(0xff07090c));
     g.addTransform(juce::AffineTransform::scale(getWidth() / 1100.0f, getHeight() / 560.0f));
-    std::vector<RadarVuPaint> cmds(8192);
     const int n = proc.paint(cmds.data(), (int) cmds.size());
     for (int i = 0; i < n; ++i) replay(g, cmds[(size_t) i]);
 }
@@ -124,24 +132,24 @@ void RadarVuEditor::mouseDown(const juce::MouseEvent& e) {
     switch (radarvu_click(p.x, p.y)) {
         case 1: proc.cycle(0); break; // meter type
         case 2: proc.cycle(1); break; // reference
-        case 3: showValueMenu(2, e.getScreenPosition()); break; // target
-        case 4: showValueMenu(3, e.getScreenPosition()); break; // ceiling
+        case 3: showValueMenu("target", e.getScreenPosition()); break;
+        case 4: showValueMenu("ceiling", e.getScreenPosition()); break;
         case 5: proc.cycle(4); break; // window
         case 6: proc.toggleFill(); break;
         case 7: proc.toggleFft(); break;
         case 8: proc.resetLoudness(); break;
         case 9: proc.setMode(0); break; // radar
         case 10: proc.setMode(1); break; // spectrum
-        case 11: showChoiceMenu(6, juce::Rectangle<int>(632, 504, 172, 34)); break;
-        case 12: showChoiceMenu(7, juce::Rectangle<int>(814, 504, 254, 34)); break;
+        case 11: showChoiceMenu("resolution", juce::Rectangle<int>(632, 504, 172, 34)); break;
+        case 12: showChoiceMenu("skin", juce::Rectangle<int>(814, 504, 254, 34)); break;
         default: break;
     }
 }
 
 void RadarVuEditor::mouseUp(const juce::MouseEvent&) { repaint(); }
 
-void RadarVuEditor::showChoiceMenu(int parameterIndex, juce::Rectangle<int> anchor) {
-    auto* parameter = dynamic_cast<juce::AudioParameterChoice*>(proc.getParameters()[parameterIndex]);
+void RadarVuEditor::showChoiceMenu(const juce::String& parameterId, juce::Rectangle<int> anchor) {
+    auto* parameter = findParameter<juce::AudioParameterChoice>(proc, parameterId);
     if (!parameter) return;
     auto look = makeMenuLook();
     juce::PopupMenu menu;
@@ -151,10 +159,10 @@ void RadarVuEditor::showChoiceMenu(int parameterIndex, juce::Rectangle<int> anch
     const auto scaled = anchor.toFloat().transformedBy(juce::AffineTransform::scale(getWidth() / 1100.0f, getHeight() / 560.0f)).toNearestInt();
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this)
         .withTargetScreenArea(localAreaToGlobal(scaled)),
-        [safe = juce::Component::SafePointer<RadarVuEditor>(this), parameterIndex, look](int result) {
+        [safe = juce::Component::SafePointer<RadarVuEditor>(this), parameterId, look](int result) {
             juce::ignoreUnused(look); // keep the menu's look-and-feel alive through its async callback
             if (safe == nullptr || result <= 0) return;
-            auto* p = dynamic_cast<juce::AudioParameterChoice*>(safe->proc.getParameters()[parameterIndex]);
+            auto* p = findParameter<juce::AudioParameterChoice>(safe->proc, parameterId);
             if (!p || result > p->choices.size()) return;
             p->beginChangeGesture();
             p->setValueNotifyingHost((float) (result - 1) / (float) (p->choices.size() - 1));
@@ -166,7 +174,7 @@ void RadarVuEditor::showChoiceMenu(int parameterIndex, juce::Rectangle<int> anch
 std::shared_ptr<juce::LookAndFeel_V4> RadarVuEditor::makeMenuLook() const {
     auto look = std::make_shared<juce::LookAndFeel_V4>();
     RadarVuSkinColours colours {};
-    auto* skin = dynamic_cast<juce::AudioParameterChoice*>(proc.getParameters()[7]);
+    auto* skin = findParameter<juce::AudioParameterChoice>(proc, "skin");
     radarvu_skin_colours(skin ? skin->getIndex() : 0, &colours);
     look->setColour(juce::PopupMenu::backgroundColourId, ink(colours.background));
     look->setColour(juce::PopupMenu::textColourId, ink(colours.text));
@@ -183,10 +191,10 @@ std::shared_ptr<juce::LookAndFeel_V4> RadarVuEditor::makeMenuLook() const {
     return look;
 }
 
-void RadarVuEditor::showValueMenu(int parameterIndex, juce::Point<int> screenPosition) {
-    auto* parameter = dynamic_cast<juce::AudioParameterFloat*>(proc.getParameters()[parameterIndex]);
+void RadarVuEditor::showValueMenu(const juce::String& parameterId, juce::Point<int> screenPosition) {
+    auto* parameter = findParameter<juce::AudioParameterFloat>(proc, parameterId);
     if (!parameter) return;
-    const bool isTarget = parameterIndex == 2;
+    const bool isTarget = parameterId == "target";
     // Common delivery values: broadcast and streaming targets, the usual true-peak ceilings.
     const std::vector<float> presets = isTarget ? std::vector<float> { -24.0f, -23.0f, -18.0f, -16.0f, -14.0f, -11.0f }
                                                 : std::vector<float> { -0.1f, -0.5f, -1.0f, -2.0f, -3.0f };
@@ -206,10 +214,10 @@ void RadarVuEditor::showValueMenu(int parameterIndex, juce::Point<int> screenPos
                                 : "Custom value... (" + juce::String(current, 1) + " " + unit + ")", true, !onPreset);
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this)
         .withTargetScreenArea(juce::Rectangle<int>(screenPosition.x, screenPosition.y, 1, 1)),
-        [safe = juce::Component::SafePointer<RadarVuEditor>(this), presets, isTarget, parameterIndex, look](int result) {
+        [safe = juce::Component::SafePointer<RadarVuEditor>(this), presets, isTarget, parameterId, look](int result) {
             juce::ignoreUnused(look); // keep the menu's look-and-feel alive through its async callback
             if (safe == nullptr || result <= 0) return;
-            if (result == 1000) { safe->askForValue(parameterIndex); return; }
+            if (result == 1000) { safe->askForValue(parameterId); return; }
             if (result > (int) presets.size()) return;
             if (isTarget) safe->proc.setTarget(presets[(size_t) result - 1]);
             else safe->proc.setCeiling(presets[(size_t) result - 1]);
@@ -217,10 +225,10 @@ void RadarVuEditor::showValueMenu(int parameterIndex, juce::Point<int> screenPos
         });
 }
 
-void RadarVuEditor::askForValue(int parameterIndex) {
-    auto* parameter = dynamic_cast<juce::AudioParameterFloat*>(proc.getParameters()[parameterIndex]);
+void RadarVuEditor::askForValue(const juce::String& parameterId) {
+    auto* parameter = findParameter<juce::AudioParameterFloat>(proc, parameterId);
     if (!parameter) return;
-    const bool isTarget = parameterIndex == 2;
+    const bool isTarget = parameterId == "target";
     const juce::String unit = isTarget ? "LUFS" : "dBTP";
     const auto lo = parameter->range.start, hi = parameter->range.end;
     auto look = makeMenuLook();

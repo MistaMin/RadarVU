@@ -1,5 +1,5 @@
 @echo off
-REM Local Windows build helper for RadarVU (uncommitted, modeled on HybridEQ/build_win.bat).
+REM Local Windows build helper for RadarVU.
 REM Loads the MSVC x64 environment, then configures (if needed) and builds.
 REM
 REM   build_win.bat                 -> configure + build all targets

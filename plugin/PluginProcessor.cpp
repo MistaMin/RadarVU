@@ -60,7 +60,7 @@ RadarVuProcessor::RadarVuProcessor()
     addParameter(skinP);
 
     for (auto* p : params()) p->addListener(this);
-    interleaved.reserve(4096 * 2);
+    interleaved.resize(4096 * 2);
     pullSetup();
 }
 
@@ -86,6 +86,7 @@ void RadarVuProcessor::pullSetup() {
     if (!meter) return;
     RadarVuSetup s {};
     readParams(s);
+    const juce::SpinLock::ScopedLockType lock(meterLock);
     radarvu_setup(meter, &s);
 }
 
@@ -119,8 +120,9 @@ void RadarVuProcessor::setMode(int index) {
     pullSetup();
 }
 
-void RadarVuProcessor::prepareToPlay(double sampleRate, int) {
-    radarvu_set_sample_rate(meter, sampleRate);
+void RadarVuProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    if ((size_t) samplesPerBlock * 2 > interleaved.size()) interleaved.resize((size_t) samplesPerBlock * 2);
+    { const juce::SpinLock::ScopedLockType lock(meterLock); radarvu_set_sample_rate(meter, sampleRate); }
     pullSetup();
 }
 
@@ -139,15 +141,25 @@ void RadarVuProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Midi
 
     const int frames = buffer.getNumSamples();
     const int channels = juce::jlimit(1, 2, totalIn);
-    interleaved.resize((size_t) frames * 2);
-
     auto* inL = buffer.getReadPointer(0);
-    auto* inR = channels > 1 ? buffer.getReadPointer(1) : inL;
-    for (int i = 0; i < frames; ++i) {
-        interleaved[(size_t) i * 2] = inL[i];
-        interleaved[(size_t) i * 2 + 1] = inR[i];
+
+    if (channels == 1) {
+        // A mono bus is metered as one channel (BS.1770), straight from the host buffer.
+        const juce::SpinLock::ScopedLockType lock(meterLock);
+        radarvu_process(meter, inL, frames, 1);
+    } else {
+        auto* inR = buffer.getReadPointer(1);
+        const int chunk = (int) interleaved.size() / 2; // a host block larger than prepareToPlay announced is cut up
+        for (int start = 0; start < frames; start += chunk) {
+            const int n = juce::jmin(chunk, frames - start);
+            for (int i = 0; i < n; ++i) {
+                interleaved[(size_t) i * 2] = inL[start + i];
+                interleaved[(size_t) i * 2 + 1] = inR[start + i];
+            }
+            const juce::SpinLock::ScopedLockType lock(meterLock);
+            radarvu_process(meter, interleaved.data(), n, 2);
+        }
     }
-    radarvu_process(meter, interleaved.data(), frames, channels);
 
     // RadarVU is a meter: the audio passes through unchanged.
 }

@@ -412,6 +412,12 @@ impl Meter {
     /// Feeds the loudness engine, the ballistic detector, and advances the sweep and the trace.
     pub fn process_interleaved(&mut self, samples: &[f32], channels: usize) {
         if channels == 0 { return; }
+        // shortcut: a NaN or infinity from a broken plug-in upstream is metered as silence. The copy (an
+        // allocation on the audio thread) only happens when one occurs; upgrade to an in-place pass if it ever does often.
+        if samples.iter().any(|v| !v.is_finite()) {
+            let clean: Vec<f32> = samples.iter().map(|v| if v.is_finite() { *v } else { 0.0 }).collect();
+            return self.process_interleaved(&clean, channels);
+        }
         let ch = channels.clamp(1, MAX_CHANNELS);
         self.scratch.clear();
         let frames = samples.len() / ch;
@@ -950,6 +956,7 @@ fn pack(cmd: &Cmd) -> RadarVuPaint {
             out.kind = 11; out.x = rect.x; out.y = rect.y; out.w = rect.w; out.h = rect.h; out.radius = *radius;
         }
         Cmd::PopClip => out.kind = 12,
+        _ => {} // a newer GoodLookinDri may add commands; kind 0 draws nothing
     }
     out
 }
@@ -1037,11 +1044,11 @@ pub extern "C" fn radarvu_click(x: c_float, y: c_float) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn radarvu_paint(meter: *const Meter, out: *mut RadarVuPaint, cap: c_int) -> c_int {
+pub extern "C" fn radarvu_paint(meter: *mut Meter, out: *mut RadarVuPaint, cap: c_int) -> c_int {
     if out.is_null() || cap <= 0 { return 0; }
-    // The spectrum analyser is UI-thread-only state; the audio thread only touches the atomic ring
-    // and the detector. The editor calls this from its paint (UI) thread.
-    let Some(m) = (unsafe { (meter as *mut Meter).as_mut() }) else { return 0 };
+    // Paints from the UI thread and mutates the meter (spectrum state), so the caller must hold the
+    // same lock as radarvu_process, radarvu_setup and radarvu_readings.
+    let Some(m) = (unsafe { meter.as_mut() }) else { return 0 };
     let scene = paint(m);
     let n = scene.cmds.len().min(cap as usize);
     let dest = unsafe { std::slice::from_raw_parts_mut(out, n) };
@@ -1093,6 +1100,22 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn one_non_finite_sample_does_not_poison_the_readings() {
+        let mut m = Meter::new(48_000.0);
+        let mut samples: Vec<f32> = (0..48_000 * 4).flat_map(|i| {
+            let v = 0.1 * (i as f32 * 0.13).sin();
+            [v, v]
+        }).collect();
+        samples[48_000] = f32::NAN;
+        samples[48_001] = f32::INFINITY;
+        for chunk in samples.chunks(512 * 2) { m.process_interleaved(chunk, 2); }
+        let r = m.loud.readings();
+        assert!(r.momentary.is_finite() && r.integrated.is_finite() && r.short_term.is_finite(), "loudness {:?} {:?}", r.momentary, r.integrated);
+        assert!(m.correlation.is_finite() && m.radar_reading().is_finite());
+        assert!(m.history[..m.history_len].iter().all(|v| v.is_finite()));
     }
 
     #[test]
@@ -1248,7 +1271,7 @@ mod tests {
             RadarVuPaint { kind: 0, x: 0.0, y: 0.0, w: 0.0, h: 0.0, x2: 0.0, y2: 0.0, radius: 0.0, width: 0.0, c0: 0, c1: 0, flags: 0, npts: 0, pts: [0.0; 64], text: [0; 48] };
             8192
         ];
-        let n = radarvu_paint(&m, out.as_mut_ptr(), 8192);
+        let n = radarvu_paint(&mut m, out.as_mut_ptr(), 8192);
         assert!(n > 100 && n <= 8192);
     }
 

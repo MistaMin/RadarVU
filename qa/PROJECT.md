@@ -5,7 +5,7 @@ Build layout expected next to this repository:
 | Path | What |
 |---|---|
 | `../audiogridder/JUCE` | JUCE checkout (used by CMake) |
-| `../instruments/GoodLookinDri` | Drawing toolkit (Rust path dependency) |
+| `../instruments/GoodLookinDri` | Drawing toolkit (Rust path dependency, v0.2.1 or newer 0.2.x) |
 
 Rust (`cargo`) and CMake 3.22+ are required.
 
@@ -38,4 +38,4 @@ macOS: VST3, AU, CLAP, LV2, AAX (when `../aax-sdk-2-8-1` is present) and Standal
 
 - `RadarVuPaint.text` holds 47 bytes; longer labels are cut silently.
 - A paint polyline holds at most 32 points (64 floats); trails are chunked in the Rust code.
-- The GUI has no host-parameter panel yet; target/ceiling/window/mode are set from the header chips and are host-automatable. unit (LU/LUFS) and colour themes are not exposed (follow-up).
+- Every host parameter has a header chip or a menu (see the user manual); the unit (LU/LUFS) is not exposed (follow-up).

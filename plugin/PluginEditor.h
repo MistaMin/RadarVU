@@ -11,12 +11,13 @@ public:
     void mouseUp(const juce::MouseEvent&) override;
 
 private:
-    void showChoiceMenu(int parameterIndex, juce::Rectangle<int> anchor);
-    // Presets plus "Custom value..." for the target (parameter 2) and the true-peak ceiling (3).
-    void showValueMenu(int parameterIndex, juce::Point<int> screenPosition);
-    void askForValue(int parameterIndex);
+    void showChoiceMenu(const juce::String& parameterId, juce::Rectangle<int> anchor);
+    // Presets plus "Custom value..." for the target and the true-peak ceiling (parameter IDs "target", "ceiling").
+    void showValueMenu(const juce::String& parameterId, juce::Point<int> screenPosition);
+    void askForValue(const juce::String& parameterId);
     std::shared_ptr<juce::LookAndFeel_V4> makeMenuLook() const;
     void timerCallback() override { repaint(); }
     RadarVuProcessor& proc;
+    std::vector<RadarVuPaint> cmds = std::vector<RadarVuPaint>(8192); // reused by every paint
     juce::ComponentBoundsConstrainer constrainer;
 };

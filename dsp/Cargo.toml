@@ -9,4 +9,4 @@ description = "BS.1770-5 loudness engine and polar radar display for RadarVU"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-goodlookindri = { path = "../../instruments/GoodLookinDri" }
+goodlookindri = { path = "../../instruments/GoodLookinDri", version = "0.2.1" } # built and tested with v0.2.1

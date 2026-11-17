@@ -48,8 +48,10 @@ void radarvu_set_sample_rate(Meter* meter, double sample_rate);
 void radarvu_setup(Meter* meter, const RadarVuSetup* setup);
 void radarvu_readings(const Meter* meter, RadarVuReadings* out);
 void radarvu_reset(Meter* meter);
+// samples: `channels` (1 or 2) interleaved channels, `frames` frames. Not thread-safe: the caller serialises
+// process, setup, reset, readings and paint.
 void radarvu_process(Meter* meter, const float* interleaved, int frames, int channels);
-int radarvu_paint(const Meter* meter, RadarVuPaint* out, int cap);
+int radarvu_paint(Meter* meter, RadarVuPaint* out, int cap);
 void radarvu_view_size(float* w, float* h);
 // Header chip hit-test: 0 none, 1 meter type, 2 reference, 3 target, 4 ceiling, 5 window,
 // 6 fill toggle, 7 fft toggle, 8 reset, 9 radar, 10 spectrum, 11 resolution, 12 skin.

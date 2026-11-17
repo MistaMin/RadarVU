@@ -27,7 +27,7 @@ The right-hand panel reads **Momentary**, **Short-Term**, **Integrated**, **True
 
 ## Features
 
-- **ArcVu's full measurement set.** VU (IEC 60268-17 galvanometer), RMS absolute dBFS with an AES-17 option, K-12/K-14/K-20, and the DIN/Nordic/BBC/EBU peak-programme meters (ITU-R BS.645-2, EBU Tech 3205-E with slow mode), plus digital peak + hold, a 3-sample over counter, clip, and a phase-correlation gauge.
+- **ArcVu's full measurement set.** VU (IEC 60268-17 galvanometer), RMS absolute dBFS, K-12/K-14/K-20, and the DIN/Nordic/BBC/EBU peak-programme meters (ITU-R BS.645-2, EBU Tech 3205-E), plus digital peak + hold, a 3-sample over counter, clip, and a phase-correlation gauge.
 - **Loudness to ITU-R BS.1770-5** (K-weighting, gating) with the EBU Tech 3341 time scales and Tech 3342 loudness range, and 4× oversampled true peak. The engine is the verified implementation shared with ArcVu and is checked against the EBU 3341/3342 calibration signals.
 - **Radar and Spectrum display modes** — the radar is a filled multicolour polar history (deep-blue → cyan → green → amber → orange → red heat ramp), and Spectrum is a full multicolour FFT analyser. Both freely resizable, and the fill / FFT can be toggled off.
 - **Clickable header** to pick the meter type (VU…EBU, Loudness), the reference (−20/−18/−14 dBFS), the loudness target (presets or any value from −40 to −6 LUFS), true-peak ceiling (presets or any value from −6 to 0 dBTP) and sweep window (5/10/15/20/30 s), plus reset.
@@ -60,11 +60,20 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target RadarVU_VST3 -j 8
 ```
 
-Rust (`cargo`) and a JUCE checkout next to this repository are required (JUCE at `../audiogridder/JUCE`). See [qa/PROJECT.md](qa/PROJECT.md) for the QA commands.
+These folders must sit next to this repository (the path is set in `CMakeLists.txt` and `dsp/Cargo.toml`):
+
+| Folder | What | Needed for |
+|---|---|---|
+| `../audiogridder/JUCE` | JUCE 8 | every build |
+| `../instruments/GoodLookinDri` | [GoodLookin DRI](https://github.com/MistaMin/GoodLookinDri), built and tested with v0.2.1 | every build |
+| `../clap-juce-extensions` | optional; fetched from GitHub when absent | CLAP |
+| `../aax-sdk-2-8-1` | Avid AAX SDK (not distributed) | AAX |
+
+Rust (`cargo`) is required. See [qa/PROJECT.md](qa/PROJECT.md) for the QA commands.
 
 ## Quality
 
-The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, AES-17, K-12, PPM, correlation), the meter ballistics suite (VU and PPM response, calibration, sample-rate and block-size invariance), and radar history timing and drawing coverage plus resolution changes, skin invariance and text contrast — 54 tests.
+The scope ledger is [qa/2026-10-29-radarvu/ledger.md](qa/2026-10-29-radarvu/ledger.md). The DSP crate's `cargo test` runs the EBU 3341/3342 calibration suite plus the detector calibration (VU, RMS, K-12, PPM, correlation), the meter ballistics suite (VU and PPM response, calibration, sample-rate and block-size invariance), and radar history timing and drawing coverage plus resolution changes, skin invariance, text contrast and non-finite input — 55 tests. The UI audit also checks mono and stereo buses.
 
 With `RADARVU_BUILD_QA=ON`, the UI audit also accepts real stereo music:
 

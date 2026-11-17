@@ -35,8 +35,10 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
-    int paint(RadarVuPaint* out, int cap) const { return radarvu_paint(meter, out, cap); }
-    void resetLoudness() { radarvu_reset(meter); }
+    // The audio thread, the editor and the parameter listeners all reach the Rust meter: one lock serialises them.
+    int paint(RadarVuPaint* out, int cap) const { const juce::SpinLock::ScopedLockType lock(meterLock); return radarvu_paint(meter, out, cap); }
+    void readings(RadarVuReadings& out) const { const juce::SpinLock::ScopedLockType lock(meterLock); radarvu_readings(meter, &out); }
+    void resetLoudness() { const juce::SpinLock::ScopedLockType lock(meterLock); radarvu_reset(meter); }
     // Cycle one of the choice parameters: 0 = meter type, 1 = reference, 4 = window.
     void cycle(int which);
     // Loudness target (LUFS) and true-peak ceiling (dBTP) take any value in their range.
@@ -60,6 +62,7 @@ private:
     std::array<juce::RangedAudioParameter*, 8> params() const { return { meterTypeP, referenceP, targetP, ceilingP, windowP, modeP, resolutionP, skinP }; }
 
     RadarVuAAXExtensions aaxExtensions;
+    mutable juce::SpinLock meterLock;
     Meter* meter = nullptr;
     juce::AudioParameterChoice* meterTypeP = nullptr;
     juce::AudioParameterChoice* referenceP = nullptr;
@@ -69,7 +72,7 @@ private:
     juce::AudioParameterChoice* modeP = nullptr;
     juce::AudioParameterChoice* resolutionP = nullptr;
     juce::AudioParameterChoice* skinP = nullptr;
-    std::vector<float> interleaved; // reused every block so processBlock never allocates
+    std::vector<float> interleaved; // sized in the constructor and prepareToPlay, so processBlock never allocates
     bool fillOn = true;
     bool fftOn = true;
 };

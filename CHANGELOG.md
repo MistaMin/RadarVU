@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed mono tracks: a mono bus only had the first half of every host block metered, each sample doubled, so the second half was ignored and the frequencies read an octave low. It is now metered in full as one channel. Stereo is unchanged.
+- The meter is shared between the audio thread and the editor under one lock, so a parameter change during playback cannot tear the radar history.
+- Host blocks larger than the size announced to `prepareToPlay` no longer allocate memory on the audio thread.
+- The editor no longer allocates its drawing buffer on every repaint.
+- Builds again with the current GoodLookin DRI (v0.2.1); the dependency now requires that version.
+- README: removed the AES-17 and EBU slow-mode options, which the plug-in never exposed.
+
 ## 1.0.1 (2026-11-07)
 
 - Radar resolution menu: 180, 360, 720 (default) or 1440 points per revolution, sampled at their capture times independent of the host buffer size. A thin contour stays visible over the dimmed fill. In Loudness mode the trace follows the 400 ms momentary measurement.
